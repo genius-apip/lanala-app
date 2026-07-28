@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LANALA · Commissions Compagnie</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g1:#0A5C47;--g2:#0F7A60;--g3:#1A9E80;--g-light:#E8F5F1;--g-mid:#C5E8DF;
+  --gold:#C8943A;--gold-l:#FDF3E3;--gold-d:#8B6520;
+  --rouge:#C0392B;--rouge-l:#FDECEA;
+  --bleu:#1A5276;--bleu-l:#EBF5FB;
+  --amber:#D4AC0D;--amber-l:#FEFDE7;
+  --slate:#1C2833;--slate-2:#2C3E50;--slate-3:#566573;
+  --bg:#F0F4F2;--surface:#fff;--s2:#F8FBFA;
+  --t1:#0D1F1A;--t2:#2C4A3E;--t3:#5A7A6E;--t4:#9AAFA7;
+  --border:#D4E0DC;--border-2:#B5CDC7;
+  --sh:0 2px 8px rgba(10,92,71,.08);--sh-lg:0 8px 32px rgba(10,92,71,.12);
+  --r:10px;--r-lg:16px;--r-xl:20px;
+  --font:'Inter',-apple-system,sans-serif;
+}
+html,body{height:100%;font-family:var(--font);font-size:14px;color:var(--t1);background:var(--bg);overflow-x:hidden}
+
+/* LAYOUT */
+#app{display:grid;grid-template-rows:auto 1fr;height:100vh}
+#header{background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);padding:0 28px;display:flex;align-items:center;gap:16px;height:64px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.h-logo{font-size:20px;font-weight:800;color:#fff;letter-spacing:-.5px}
+.h-sub{font-size:12px;color:rgba(255,255,255,.6);margin-top:1px}
+.h-spacer{flex:1}
+.h-btn{padding:8px 16px;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:var(--font);display:flex;align-items:center;gap:6px;transition:all .15s}
+.h-btn-ghost{background:rgba(255,255,255,.12);color:#fff}
+.h-btn-ghost:hover{background:rgba(255,255,255,.2)}
+.h-btn-gold{background:var(--gold);color:#fff}
+.h-btn-gold:hover{background:var(--gold-d)}
+.h-back{background:none;border:none;color:rgba(255,255,255,.7);font-size:13px;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:var(--r)}
+.h-back:hover{background:rgba(255,255,255,.1);color:#fff}
+
+#content{overflow-y:auto;padding:24px 28px}
+
+/* SECTIONS */
+.section{margin-bottom:28px}
+.section-title{font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:28px}
+.kpi{background:var(--surface);border-radius:var(--r-lg);padding:18px 20px;border:1px solid var(--border);box-shadow:var(--sh);position:relative;overflow:hidden;cursor:default}
+.kpi::after{content:'';position:absolute;width:80px;height:80px;border-radius:50%;top:-20px;right:-20px;opacity:.08}
+.kpi.kpi-g::after{background:var(--g1)}
+.kpi.kpi-gold::after{background:var(--gold)}
+.kpi.kpi-r::after{background:var(--rouge)}
+.kpi.kpi-b::after{background:var(--bleu)}
+.kpi.kpi-a::after{background:var(--amber)}
+.kpi-label{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.kpi-val{font-size:26px;font-weight:800;letter-spacing:-1px;line-height:1}
+.kpi.kpi-g .kpi-val{color:var(--g1)}
+.kpi.kpi-gold .kpi-val{color:var(--gold-d)}
+.kpi.kpi-r .kpi-val{color:var(--rouge)}
+.kpi.kpi-b .kpi-val{color:var(--bleu)}
+.kpi.kpi-a .kpi-val{color:var(--amber)}
+.kpi-sub{font-size:11px;color:var(--t4);margin-top:5px}
+.kpi-trend{position:absolute;top:16px;right:16px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
+.trend-up{background:var(--g-light);color:var(--g1)}
+.trend-down{background:var(--rouge-l);color:var(--rouge)}
+.trend-warn{background:var(--amber-l);color:#8B7000}
+
+/* PROGRESS BAR */
+.progress-section{background:var(--surface);border-radius:var(--r-lg);padding:20px 24px;border:1px solid var(--border);box-shadow:var(--sh);margin-bottom:28px}
+.progress-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px}
+.progress-title{font-size:14px;font-weight:700;color:var(--t1)}
+.progress-pct{font-size:28px;font-weight:800;color:var(--g1)}
+.progress-track{height:12px;background:var(--border);border-radius:6px;overflow:hidden;position:relative}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--g1),var(--g3));border-radius:6px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.progress-labels{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--t3)}
+.progress-segments{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.seg{background:var(--s2);border-radius:var(--r);padding:12px 14px;border-left:3px solid var(--g1)}
+.seg.seg-gold{border-left-color:var(--gold)}
+.seg.seg-r{border-left-color:var(--rouge)}
+.seg-label{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px}
+.seg-val{font-size:18px;font-weight:800;color:var(--t1);margin-top:3px}
+.seg.seg-gold .seg-val{color:var(--gold-d)}
+.seg.seg-r .seg-val{color:var(--rouge)}
+
+/* CHARTS */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px}
+.chart-card{background:var(--surface);border-radius:var(--r-lg);padding:20px 24px;border:1px solid var(--border);box-shadow:var(--sh)}
+.chart-title{font-size:14px;font-weight:700;color:var(--t1);margin-bottom:16px}
+.chart-wrap{position:relative;height:200px}
+
+/* TABLEAU BORDEREAU */
+.table-card{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);box-shadow:var(--sh);overflow:hidden}
+.table-toolbar{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--s2)}
+.table-title{font-size:14px;font-weight:700;color:var(--t1);flex:1}
+.filter-btn{padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);cursor:pointer;font-family:var(--font);transition:all .15s;background:var(--surface);color:var(--t2)}
+.filter-btn.active{background:var(--g1);color:#fff;border-color:var(--g1)}
+.filter-btn.f-arr{color:var(--rouge)}
+.filter-btn.f-arr.active{background:var(--rouge);border-color:var(--rouge)}
+.filter-btn.f-nonpaye.active{background:var(--gold-d);border-color:var(--gold-d)}
+.search-tbl{padding:7px 12px;border:1px solid var(--border);border-radius:20px;font-size:12px;font-family:var(--font);outline:none;background:var(--surface);width:200px}
+.search-tbl:focus{border-color:var(--g1)}
+
+.tbl-wrap{overflow-x:auto;max-height:480px;overflow-y:auto}
+table.main{width:100%;border-collapse:collapse;font-size:12px}
+table.main thead th{
+  padding:10px 14px;font-size:10px;font-weight:700;color:var(--t3);
+  text-transform:uppercase;letter-spacing:.5px;text-align:left;
+  background:var(--s2);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:5;white-space:nowrap;
+}
+table.main thead th.th-r{text-align:right}
+table.main td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--t1);white-space:nowrap}
+table.main tr:last-child td{border-bottom:none}
+table.main tr:hover td{background:var(--g-light)}
+table.main tr.row-arr td{background:#FFF8F8}
+table.main tr.row-arr:hover td{background:#FDECEA}
+table.main tr.row-paid td{opacity:.65}
+.td-r{text-align:right;font-variant-numeric:tabular-nums}
+.td-c{text-align:center}
+.badge-etat{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700}
+.badge-reg{background:var(--g-light);color:var(--g1)}
+.badge-arr{background:var(--rouge-l);color:var(--rouge)}
+.check-cell{cursor:pointer;width:36px}
+.check-wrap{width:18px;height:18px;border:2px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;transition:all .15s;margin:0 auto}
+.check-wrap.checked{background:var(--g1);border-color:var(--g1);color:#fff}
+.check-wrap.checked::after{content:'✓';font-size:11px;font-weight:700}
+.amount-g{color:var(--g1);font-weight:700}
+.amount-gold{color:var(--gold-d);font-weight:700}
+.amount-r{color:var(--rouge);font-weight:700}
+.tbl-footer{padding:12px 20px;border-top:2px solid var(--border);background:var(--g-light);display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.foot-cell{text-align:right}
+.foot-label{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase}
+.foot-val{font-size:14px;font-weight:800;color:var(--t1);margin-top:2px}
+.foot-val.green{color:var(--g1)}
+.foot-val.gold{color:var(--gold-d)}
+.foot-val.red{color:var(--rouge)}
+
+/* IMPORT PANEL */
+.import-panel{background:var(--surface);border-radius:var(--r-lg);border:2px dashed var(--border-2);padding:32px;text-align:center;margin-bottom:28px;cursor:pointer;transition:all .2s}
+.import-panel:hover,.import-panel.drag{border-color:var(--g1);background:var(--g-light)}
+.import-icon{font-size:44px;margin-bottom:12px}
+.import-title{font-size:16px;font-weight:700;color:var(--t1);margin-bottom:6px}
+.import-sub{font-size:13px;color:var(--t3);margin-bottom:16px}
+.import-progress{margin-top:16px;display:none}
+
+/* PAIEMENT PANEL */
+.pay-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.pay-modal.open{display:flex}
+.pay-box{background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:480px;overflow:hidden;box-shadow:var(--sh-lg)}
+.pay-header{background:linear-gradient(135deg,var(--g1),var(--g2));padding:20px 24px;color:#fff}
+.pay-title{font-size:17px;font-weight:700}
+.pay-sub{font-size:12px;opacity:.75;margin-top:3px}
+.pay-body{padding:20px 24px}
+.pay-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+.fg{margin-bottom:14px}
+.fg label{font-size:12px;font-weight:600;color:var(--t2);display:block;margin-bottom:5px}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;font-size:13px;border:1px solid var(--border);border-radius:var(--r);color:var(--t1);background:var(--surface);outline:none;font-family:var(--font)}
+.fg input:focus,.fg select:focus{border-color:var(--g1)}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{padding:9px 18px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:var(--font);display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.btn-primary{background:var(--g1);color:#fff}
+.btn-primary:hover{background:var(--g2)}
+.btn-secondary{background:var(--s2);color:var(--t1);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--border)}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-gold:hover{background:var(--gold-d)}
+.btn-full{width:100%;justify-content:center}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--slate);color:#fff;padding:12px 20px;border-radius:30px;font-size:13px;font-weight:600;z-index:400;transition:transform .3s cubic-bezier(.34,1.56,.64,1);box-shadow:var(--sh-lg)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* LOADING */
+.loading{display:flex;align-items:center;justify-content:center;padding:48px;gap:12px;color:var(--t3)}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--g1);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.empty{text-align:center;padding:48px;color:var(--t3)}
+.empty-icon{font-size:44px;margin-bottom:12px;opacity:.4}
+.empty-title{font-size:15px;font-weight:700;color:var(--t2);margin-bottom:6px}
+
+/* TIMELINE PAIEMENTS */
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);align-items:flex-start;cursor:pointer;transition:background .1s}
+.tl-item:hover{background:var(--s2)}
+.tl-dot{width:10px;height:10px;border-radius:50%;background:var(--g1);margin-top:5px;flex-shrink:0}
+.tl-body{flex:1}
+.tl-ref{font-size:13px;font-weight:700;color:var(--t1);font-family:monospace}
+.tl-info{font-size:11px;color:var(--t3);margin-top:2px}
+.tl-right{text-align:right}
+.tl-amount{font-size:14px;font-weight:800;color:var(--g1)}
+.tl-nb{font-size:11px;color:var(--t3);margin-top:2px}
+
+@media(max-width:768px){
+  #content{padding:16px}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .charts-grid{grid-template-columns:1fr}
+  .progress-segments{grid-template-columns:1fr}
+  .tbl-footer{grid-template-columns:1fr 1fr}
+  .h-btn span{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="header">
+    <div>
+      <div class="h-logo">🛡️ LANALA · Commissions Compagnie</div>
+      <div class="h-sub">Agence Kaloum · Code 140 · Suivi des reversements</div>
+    </div>
+    <div class="h-spacer"></div>
+    <button class="h-btn h-btn-ghost" onclick="window.location.href='index.html'">← <span>Retour app</span></button>
+    <button class="h-btn h-btn-ghost" onclick="ouvrirImport()">📂 <span>Importer bordereau</span></button>
+    <button class="h-btn h-btn-gold" onclick="ouvrirNouveauPaiement()">💰 <span>Saisir paiement reçu</span></button>
+  </header>
+
+  <div id="content">
+
+    <!-- KPI CARDS -->
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+
+    <!-- BARRE DE PROGRESSION -->
+    <div class="progress-section" id="progress-section" style="display:none">
+      <div class="progress-header">
+        <div>
+          <div class="progress-title">Taux de recouvrement des commissions</div>
+          <div style="font-size:12px;color:var(--t3);margin-top:3px">Commission confirmée reçue vs commission due totale</div>
+        </div>
+        <div class="progress-pct" id="progress-pct">0%</div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="progress-labels"><span id="p-recue">0 GNF reçu confirmé</span><span id="p-due">0 GNF dû total</span></div>
+      <div class="progress-segments">
+        <div class="seg"><div class="seg-label">Commission due totale</div><div class="seg-val" id="seg-due">—</div></div>
+        <div class="seg seg-gold"><div class="seg-label">Reçu (cochées)</div><div class="seg-val" id="seg-recue">—</div></div>
+        <div class="seg seg-r"><div class="seg-label">Reste à recevoir</div><div class="seg-val" id="seg-reste">—</div></div>
+      </div>
+    </div>
+
+    <!-- GRAPHIQUES -->
+    <div class="charts-grid" id="charts-grid" style="display:none">
+      <div class="chart-card">
+        <div class="chart-title">Répartition par sous-branche</div>
+        <div class="chart-wrap"><canvas id="chart-branche"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Commission : due vs reçue vs reste</div>
+        <div class="chart-wrap"><canvas id="chart-comm"></canvas></div>
+      </div>
+    </div>
+
+    <!-- IMPORT PANEL (visible si pas de données) -->
+    <div class="import-panel" id="import-panel" onclick="ouvrirImport()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="gererDrop(event)">
+      <div class="import-icon">📊</div>
+      <div class="import-title">Importer votre bordereau compagnie</div>
+      <div class="import-sub">Glissez-déposez votre fichier TXT/TSV ou cliquez pour sélectionner<br>Format : colonnes séparées par des tabulations · Pas de doublons</div>
+      <button class="btn btn-primary" style="margin:0 auto" onclick="event.stopPropagation();document.getElementById('file-input').click()">Choisir un fichier</button>
+      <div class="import-progress" id="import-progress">
+        <div class="progress-track" style="max-width:300px;margin:12px auto"><div class="progress-fill" id="import-bar" style="width:0%"></div></div>
+        <div id="import-msg" style="font-size:12px;color:var(--t3);margin-top:8px">Traitement...</div>
+      </div>
+    </div>
+
+    <!-- TABLEAU BORDEREAU -->
+    <div class="table-card" id="table-card" style="display:none">
+      <div class="table-toolbar">
+        <div class="table-title">Détail des polices <span id="tbl-count" style="font-weight:400;color:var(--t3)"></span></div>
+        <button class="filter-btn active" id="f-all" onclick="filtrerTable('all')">Toutes</button>
+        <button class="filter-btn f-arr" id="f-arr" onclick="filtrerTable('arr')">ARR seulement</button>
+        <button class="filter-btn f-nonpaye" id="f-np" onclick="filtrerTable('nonpaye')">Non reçues</button>
+        <button class="filter-btn" id="f-recues" onclick="filtrerTable('recues')">✓ Reçues</button>
+        <input type="search" class="search-tbl" placeholder="Rechercher client…" oninput="rechercherTable(this.value)"/>
+        <button class="btn btn-secondary" style="font-size:12px" onclick="exporterBordereau()">⬇️ Excel</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="main" id="main-table">
+          <thead>
+            <tr>
+              <th class="td-c" style="width:44px" title="Cocher = commission reçue">✓ Reçue</th>
+              <th>N° Police</th>
+              <th>Client</th>
+              <th>Rapporteur</th>
+              <th>Branche</th>
+              <th class="td-c">État</th>
+              <th class="th-r">Prime TTC</th>
+              <th class="th-r">Comm. due</th>
+              <th class="th-r">Comm. payée cie</th>
+              <th class="th-r">Reste</th>
+              <th>Période</th>
+              <th>Réf. paiement</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body"></tbody>
+        </table>
+      </div>
+      <div class="tbl-footer" id="tbl-footer"></div>
+    </div>
+
+    <!-- HISTORIQUE PAIEMENTS COMPAGNIE -->
+    <div class="section" id="section-paiements" style="display:none">
+      <div class="section-title">Historique des paiements reçus de la compagnie</div>
+      <div class="table-card">
+        <div id="timeline-paiements"><div class="empty"><div class="empty-icon">💸</div><div class="empty-title">Aucun paiement enregistré</div></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- INPUT FICHIER CACHÉ -->
+<input type="file" id="file-input" accept=".txt,.tsv,.csv,.xls,.xlsx" style="display:none" onchange="importerFichier(this.files[0])"/>
+
+<!-- MODAL NOUVEAU PAIEMENT -->
+<div class="pay-modal" id="pay-modal">
+  <div class="pay-box">
+    <div class="pay-header">
+      <div class="pay-title">💰 Saisir un paiement reçu</div>
+      <div class="pay-sub">Enregistrez un reversement de commission de la compagnie</div>
+    </div>
+    <div class="pay-body">
+      <div class="fg">
+        <label>Référence du paiement *</label>
+        <input type="text" id="pay-ref" placeholder="Ex: #2445267895298"/>
+        <div style="font-size:11px;color:var(--t3);margin-top:4px">Telle qu'elle apparaît sur votre relevé Mobile Money</div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>Date du paiement *</label><input type="date" id="pay-date" value=""/></div>
+        <div class="fg"><label>Heure</label><input type="text" id="pay-heure" placeholder="Ex: 17:06:36"/></div>
+      </div>
+      <div class="fg"><label>Montant reçu (GNF) *</label><input type="number" id="pay-montant" placeholder="3 191 632"/></div>
+      <div class="fg"><label>Notes (optionnel)</label><textarea id="pay-notes" rows="2" placeholder="Précisions sur ce paiement…"></textarea></div>
+      <div style="background:var(--g-light);border-radius:var(--r);padding:12px;font-size:12px;color:var(--g1)">
+        <strong>💡 Astuce :</strong> Après avoir enregistré ce paiement, cochez les polices correspondantes dans le tableau pour marquer leurs commissions comme reçues.
+      </div>
+    </div>
+    <div class="pay-footer">
+      <button class="btn btn-secondary" onclick="fermerPaiement()">Annuler</button>
+      <button class="btn btn-primary" onclick="sauvegarderPaiement()">✅ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL='https://tvchylzpgymeamttuxhq.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2Y2h5bHpwZ3ltZWFtdHR1eGhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMTIwNTQsImV4cCI6MjA5OTc4ODA1NH0.LfGe6k-US-IwwadGQG005BxKO0EKltt9mAYM-hEYN4A';
+const{createClient}=supabase;
+const db=createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const fmt=n=>(n||n===0)?Math.round(n).toLocaleString('fr-FR'):'—';
+const fmtD=d=>d?new Date(d).toLocaleDateString('fr-FR'):'—';
+const fmtGNF=n=>fmt(n)+' GNF';
+
+let allData=[];
+let filtreActif='all';
+let rechercheActive='';
+let charts={};
+
+// ===== CHARGEMENT INITIAL =====
+async function charger(){
+  const{data}=await db.from('bordereau_compagnie').select('*').order('date_du',{ascending:false});
+  allData=data||[];
+  if(allData.length){
+    document.getElementById('import-panel').style.display='none';
+    document.getElementById('table-card').style.display='block';
+    document.getElementById('progress-section').style.display='block';
+    document.getElementById('charts-grid').style.display='grid';
+    document.getElementById('section-paiements').style.display='block';
+  }
+  renderKPIs();
+  renderTable();
+  renderCharts();
+  chargerPaiements();
+}
+
+// ===== KPIs =====
+function renderKPIs(){
+  const d=allData;
+  const totDue=d.reduce((s,r)=>s+(r.commission_agence||0),0);
+  const totPayeCie=d.reduce((s,r)=>s+(r.commission_paye_cie||0),0);
+  const totRecueConf=d.filter(r=>r.commission_recue).reduce((s,r)=>s+(r.commission_agence||0),0);
+  const reste=totDue-totRecueConf;
+  const nbReg=d.filter(r=>r.etat_mvt==='REG').length;
+  const nbArr=d.filter(r=>r.etat_mvt==='ARR').length;
+  const nbRecue=d.filter(r=>r.commission_recue).length;
+  const totPrime=d.reduce((s,r)=>s+(r.prime_total||0),0);
+  const pct=totDue>0?Math.round(totRecueConf/totDue*100):0;
+
+  document.getElementById('kpi-grid').innerHTML=`
+    <div class="kpi kpi-g">
+      <div class="kpi-label">Commission due totale</div>
+      <div class="kpi-val">${fmt(Math.round(totDue))}</div>
+      <div class="kpi-sub">GNF · ${d.length} polices</div>
+    </div>
+    <div class="kpi kpi-gold">
+      <div class="kpi-label">Commissions reçues ✓</div>
+      <div class="kpi-val">${fmt(Math.round(totRecueConf))}</div>
+      <div class="kpi-sub">GNF · ${nbRecue} polices cochées</div>
+      <span class="kpi-trend trend-up">${pct}%</span>
+    </div>
+    <div class="kpi kpi-r">
+      <div class="kpi-label">Reste à recevoir</div>
+      <div class="kpi-val">${fmt(Math.round(reste))}</div>
+      <div class="kpi-sub">GNF · ${d.length-nbRecue} polices en attente</div>
+      <span class="kpi-trend trend-down">${100-pct}%</span>
+    </div>
+    <div class="kpi kpi-b">
+      <div class="kpi-label">Prime TTC totale</div>
+      <div class="kpi-val">${fmt(Math.round(totPrime))}</div>
+      <div class="kpi-sub">GNF encaissés par la compagnie</div>
+    </div>
+    <div class="kpi kpi-a">
+      <div class="kpi-label">Polices ARR (impayées)</div>
+      <div class="kpi-val">${nbArr}</div>
+      <div class="kpi-sub">sur ${d.length} polices · ${nbReg} REG</div>
+      <span class="kpi-trend trend-warn">⚠️ Attention</span>
+    </div>`;
+
+  // Progress
+  document.getElementById('progress-pct').textContent=pct+'%';
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('p-recue').textContent=fmtGNF(Math.round(totRecueConf))+' reçu confirmé';
+  document.getElementById('p-due').textContent=fmtGNF(Math.round(totDue))+' dû total';
+  document.getElementById('seg-due').textContent=fmtGNF(Math.round(totDue));
+  document.getElementById('seg-recue').textContent=fmtGNF(Math.round(totRecueConf));
+  document.getElementById('seg-reste').textContent=fmtGNF(Math.round(reste));
+}
+
+// ===== TABLEAU =====
+function getFiltered(){
+  let list=allData;
+  if(filtreActif==='arr')list=list.filter(r=>r.etat_mvt==='ARR');
+  else if(filtreActif==='nonpaye')list=list.filter(r=>!r.commission_recue);
+  else if(filtreActif==='recues')list=list.filter(r=>r.commission_recue);
+  if(rechercheActive)list=list.filter(r=>(r.client_nom||'').toLowerCase().includes(rechercheActive)||(r.n_police||'').includes(rechercheActive));
+  return list;
+}
+
+function renderTable(){
+  const list=getFiltered();
+  document.getElementById('tbl-count').textContent='('+list.length+' / '+allData.length+')';
+
+  let totPrime=0,totDue=0,totPayeCie=0,totRecue=0;
+  list.forEach(r=>{totPrime+=r.prime_total||0;totDue+=r.commission_agence||0;totPayeCie+=r.commission_paye_cie||0;if(r.commission_recue)totRecue+=r.commission_agence||0;});
+
+  document.getElementById('tbl-body').innerHTML=list.map(r=>{
+    const reste=(r.commission_agence||0)-(r.commission_paye_cie||0);
+    const branche=r.code_sous_branche?{5101:'Auto Part.',5102:'Auto Flotte',5104:'Auto Com.',5106:'Auto Tiers',9104:'Risques div.'}[r.code_sous_branche]||r.code_sous_branche:'—';
+    return`<tr class="${r.etat_mvt==='ARR'?'row-arr':''} ${r.commission_recue?'row-paid':''}" id="row-${r.id}">
+      <td class="td-c check-cell" onclick="toggleCommission('${r.id}',${!r.commission_recue})">
+        <div class="check-wrap ${r.commission_recue?'checked':''}" id="chk-${r.id}"></div>
+      </td>
+      <td style="font-family:monospace;font-size:11px">${r.n_police||'—'}</td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis">${r.client_nom||'—'}</td>
+      <td style="font-size:11px;color:var(--t3)">${r.rapporteur||'—'}</td>
+      <td><span style="font-size:10px;background:var(--s2);padding:2px 6px;border-radius:4px;font-weight:600">${branche}</span></td>
+      <td class="td-c"><span class="badge-etat ${r.etat_mvt==='ARR'?'badge-arr':'badge-reg'}">${r.etat_mvt||'REG'}</span></td>
+      <td class="td-r">${fmt(Math.round(r.prime_total||0))}</td>
+      <td class="td-r amount-g">${fmt(Math.round(r.commission_agence||0))}</td>
+      <td class="td-r amount-gold">${fmt(Math.round(r.commission_paye_cie||0))}</td>
+      <td class="td-r ${reste>0?'amount-r':''}">${fmt(Math.round(reste))}</td>
+      <td style="font-size:11px;color:var(--t3)">${fmtD(r.date_du)} → ${fmtD(r.date_au)}</td>
+      <td style="font-size:10px;color:var(--t3);font-family:monospace">${r.reference_paiement||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('tbl-footer').innerHTML=`
+    <div class="foot-cell"><div class="foot-label">Polices</div><div class="foot-val">${list.length}</div></div>
+    <div class="foot-cell"><div class="foot-label">Prime TTC</div><div class="foot-val">${fmt(Math.round(totPrime))}</div></div>
+    <div class="foot-cell"><div class="foot-label">Comm. due</div><div class="foot-val green">${fmt(Math.round(totDue))}</div></div>
+    <div class="foot-cell"><div class="foot-label">Comm. payée cie</div><div class="foot-val gold">${fmt(Math.round(totPayeCie))}</div></div>
+    <div class="foot-cell"><div class="foot-label">Reçu confirmé</div><div class="foot-val ${totRecue>0?'green':'red'}">${fmt(Math.round(totRecue))}</div></div>`;
+}
+
+function filtrerTable(f){
+  filtreActif=f;
+  ['all','arr','np','recues'].forEach(x=>document.getElementById('f-'+x)?.classList.remove('active'));
+  const map={all:'f-all',arr:'f-arr',nonpaye:'f-np',recues:'f-recues'};
+  if(map[f])document.getElementById(map[f])?.classList.add('active');
+  renderTable();
+}
+function rechercherTable(q){rechercheActive=q.toLowerCase();renderTable();}
+
+// ===== COCHER COMMISSION =====
+async function toggleCommission(id,recue){
+  const{error}=await db.from('bordereau_compagnie').update({commission_recue:recue,date_reception:recue?new Date().toISOString().split('T')[0]:null}).eq('id',id);
+  if(error){showToast('❌ '+error.message);return;}
+  const row=allData.find(r=>r.id===id);
+  if(row){row.commission_recue=recue;row.date_reception=recue?new Date().toISOString().split('T')[0]:null;}
+  const chk=document.getElementById('chk-'+id);
+  if(chk){chk.className='check-wrap '+(recue?'checked':'');}
+  const tr=document.getElementById('row-'+id);
+  if(tr){tr.className=(tr.className.includes('row-arr')?'row-arr ':'')+(recue?' row-paid':'');}
+  renderKPIs();
+  renderCharts();
+  showToast(recue?'✅ Commission marquée comme reçue':'↩️ Commission marquée non reçue');
+}
+
+// ===== GRAPHIQUES =====
+function renderCharts(){
+  if(!allData.length)return;
+
+  // Graphique 1 : par branche
+  const brancheMap={5101:'Auto Particuliers',5102:'Auto Flottes',5104:'Auto Com.',5106:'Auto Tiers',9104:'Risques div.'};
+  const byBranche={};
+  allData.forEach(r=>{const b=brancheMap[r.code_sous_branche]||r.code_sous_branche||'Autre';if(!byBranche[b])byBranche[b]=0;byBranche[b]+=(r.commission_agence||0);});
+  const labels1=Object.keys(byBranche);
+  const vals1=Object.values(byBranche).map(v=>Math.round(v));
+  const colors=['#0A5C47','#0F7A60','#1A9E80','#C8943A','#1A5276','#C0392B'];
+
+  if(charts.branche)charts.branche.destroy();
+  charts.branche=new Chart(document.getElementById('chart-branche'),{
+    type:'doughnut',
+    data:{labels:labels1,datasets:[{data:vals1,backgroundColor:colors,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},padding:10}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fmt(ctx.raw)} GNF`}}}}
+  });
+
+  // Graphique 2 : due vs reçue vs reste
+  const totDue=Math.round(allData.reduce((s,r)=>s+(r.commission_agence||0),0));
+  const totPayeCie=Math.round(allData.reduce((s,r)=>s+(r.commission_paye_cie||0),0));
+  const totRecue=Math.round(allData.filter(r=>r.commission_recue).reduce((s,r)=>s+(r.commission_agence||0),0));
+  const reste=totDue-totRecue;
+
+  if(charts.comm)charts.comm.destroy();
+  charts.comm=new Chart(document.getElementById('chart-comm'),{
+    type:'bar',
+    data:{
+      labels:['Commission due','Payée par cie (bordereau)','Reçue confirmée (cochée)','Reste à recevoir'],
+      datasets:[{data:[totDue,totPayeCie,totRecue,reste],backgroundColor:['#0A5C47','#C8943A','#1A9E80','#C0392B'],borderRadius:6,borderSkipped:false}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${fmt(ctx.raw)} GNF`}}},scales:{y:{ticks:{callback:v=>fmt(v)},grid:{color:'#E8F5F1'}},x:{ticks:{font:{size:10}}}}}
+  });
+}
+
+// ===== IMPORT BORDEREAU =====
+function ouvrirImport(){document.getElementById('file-input').click();}
+function gererDrop(e){e.preventDefault();document.querySelector('.import-panel').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)importerFichier(f);}
+
+// ===== MAPPING SOUS-BRANCHE → TYPE ASSURANCE =====
+const BRANCHE_TYPE={
+  '5101':'Automobile','5102':'Automobile','5104':'Automobile',
+  '5106':'Automobile','5116':'Automobile','9104':'Risques divers',
+  '3101':'Incendie','4101':'Transport','7101':'Santé','8101':'Voyage'
+};
+
+async function importerFichier(file){
+  if(!file)return;
+  const prog=document.getElementById('import-progress');
+  const bar=document.getElementById('import-bar');
+  const msg=document.getElementById('import-msg');
+  prog.style.display='block';
+
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    try{
+      const text=e.target.result;
+      // Supporter séparateur tab ou point-virgule
+      const sep=text.includes('\t')?'\t':';';
+      const lignes=text.trim().split(/\r?\n/).filter(l=>l.trim());
+      msg.textContent='Analyse du fichier…';bar.style.width='10%';
+
+      // ===== ÉTAPE 1 : Parser toutes les lignes =====
+      const policesParsees=[];
+      for(const ligne of lignes){
+        const parts=ligne.split(sep).map(s=>s.replace(/#/g,'').trim());
+        if(parts.length<12)continue;
+        // Numéro de police : 14 chiffres commençant par 104 ou 105 ou 109...
+        if(!parts[0]||!/^\d{10,16}$/.test(parts[0]))continue;
+
+        policesParsees.push({
+          n_police       : parts[0],
+          n_quittance    : parts[1]||null,
+          terme_comptant : parts[2]||'C',
+          date_du        : parseDate(parts[3]),
+          date_au        : parseDate(parts[4]),
+          prime_nette    : parseNum(parts[5]),
+          frais          : parseNum(parts[6]),
+          taxes          : parseNum(parts[7]),
+          prime_total    : parseNum(parts[8]),
+          prime_encaissee: parseNum(parts[9]),
+          commission_agence   : parseNum(parts[11]),
+          commission_paye_cie : parseNum(parts[12]),
+          etat_mvt       : (parts[13]||'REG').trim(),
+          code_branche   : parts[15]||null,
+          code_sous_branche: parts[16]||null,
+          client_nom     : parts[17]||null,
+          rapporteur     : parts[21]||null,
+          date_modif     : parseDate(parts[19]),
+          import_batch   : new Date().toISOString().split('T')[0]
+        });
+      }
+
+      if(!policesParsees.length){
+        msg.textContent='⚠️ Aucune police détectée. Vérifiez le format du fichier.';
+        showToast('⚠️ Format non reconnu — vérifiez que le fichier est bien le bordereau compagnie');
+        return;
+      }
+
+      msg.textContent=`${policesParsees.length} polices détectées. Synchronisation en cours…`;
+      bar.style.width='20%';
+
+      // ===== ÉTAPE 2 : Charger les existants une seule fois (perf) =====
+      const{data:existBordereau}=await db.from('bordereau_compagnie')
+        .select('id,n_police,n_quittance,commission_recue,reference_paiement,date_reception');
+      const mapBordereau={};
+      (existBordereau||[]).forEach(r=>{mapBordereau[r.n_police+'|'+(r.n_quittance||'')] = r;});
+
+      const{data:existPolices}=await db.from('polices')
+        .select('id,n_police,n_quittance,commission_agent');
+      const mapPolices={};
+      (existPolices||[]).forEach(r=>{mapPolices[r.n_police+'|'+(r.n_quittance||'')] = r;});
+
+      bar.style.width='35%';
+
+      // ===== ÉTAPE 3 : Synchroniser bordereau_compagnie =====
+      let b_nouvelles=0,b_maj=0,b_err=0;
+      const batchInsert=[];
+      const batchUpdate=[];
+
+      for(const pol of policesParsees){
+        const key=pol.n_police+'|'+(pol.n_quittance||'');
+        const exist=mapBordereau[key];
+        if(exist){
+          // MAJ données financières — NE PAS écraser commission_recue / reference_paiement
+          batchUpdate.push({
+            id: exist.id,
+            prime_nette: pol.prime_nette,
+            prime_total: pol.prime_total,
+            prime_encaissee: pol.prime_encaissee,
+            commission_agence: pol.commission_agence,
+            commission_paye_cie: pol.commission_paye_cie,
+            etat_mvt: pol.etat_mvt,
+            date_du: pol.date_du,
+            date_au: pol.date_au,
+            date_modif: pol.date_modif
+          });
+          b_maj++;
+        }else{
+          batchInsert.push(pol);
+          b_nouvelles++;
+        }
+      }
+
+      // Insérer les nouvelles en batch
+      if(batchInsert.length){
+        const chunkSize=20;
+        for(let i=0;i<batchInsert.length;i+=chunkSize){
+          const chunk=batchInsert.slice(i,i+chunkSize);
+          const{error}=await db.from('bordereau_compagnie').insert(chunk);
+          if(error)b_err+=chunk.length;
+          bar.style.width=(35+Math.round(i/batchInsert.length*20))+'%';
+        }
+      }
+
+      // Mettre à jour les existantes
+      if(batchUpdate.length){
+        for(let i=0;i<batchUpdate.length;i++){
+          const u=batchUpdate[i];
+          const id=u.id; delete u.id;
+          await db.from('bordereau_compagnie').update(u).eq('id',id);
+          if(i%10===0)bar.style.width=(55+Math.round(i/batchUpdate.length*20))+'%';
+        }
+      }
+
+      bar.style.width='75%';
+      msg.textContent='Synchronisation table polices…';
+
+      // ===== ÉTAPE 4 : Synchroniser la table polices (app principale) =====
+      let p_nouvelles=0,p_maj=0;
+      const pInsert=[];
+      const pUpdate=[];
+
+      for(const pol of policesParsees){
+        const key=pol.n_police+'|'+(pol.n_quittance||'');
+        const exist=mapPolices[key];
+        const type=BRANCHE_TYPE[pol.code_sous_branche]||'Automobile';
+        const branche_code=pol.code_sous_branche?
+          (pol.code_branche==='5000'?'5-':'9-')+pol.code_sous_branche.slice(-3)
+          :null;
+
+        if(exist){
+          // Mettre à jour uniquement les champs financiers, dates et état
+          // NE PAS écraser apporteur_id, taux, commission_apporteur_nette
+          pUpdate.push({
+            id: exist.id,
+            type_assurance: type,
+            branche_code: branche_code,
+            prime_ttc: Math.round(pol.prime_total),
+            commission_agent: Math.round(pol.commission_agence),
+            date_effet: pol.date_du,
+            date_expiration: pol.date_au,
+            n_quittance: pol.n_quittance,
+            solde: Math.round(Math.max(0,pol.prime_total-pol.prime_encaissee))
+          });
+          p_maj++;
+        }else{
+          // Nouvelle police à créer
+          pInsert.push({
+            n_police: pol.n_police,
+            n_quittance: pol.n_quittance,
+            client_nom: pol.client_nom||'—',
+            type_assurance: type,
+            branche_code: branche_code,
+            date_effet: pol.date_du,
+            date_expiration: pol.date_au,
+            prime_nette: Math.round(pol.prime_nette),
+            frais_accessoires: Math.round(pol.frais||0),
+            taxe: Math.round(pol.taxes||0),
+            prime_ttc: Math.round(pol.prime_total),
+            montant_encaisse: Math.round(pol.prime_encaissee),
+            solde: Math.round(Math.max(0,pol.prime_total-pol.prime_encaissee)),
+            commission_agent: Math.round(pol.commission_agence),
+            taux_apporteur: 0,
+            commission_apporteur_nette: 0,
+            type_contrat: pol.terme_comptant||'C'
+          });
+          p_nouvelles++;
+        }
+      }
+
+      // Insérer nouvelles polices
+      if(pInsert.length){
+        const chunkSize=20;
+        for(let i=0;i<pInsert.length;i+=chunkSize){
+          const chunk=pInsert.slice(i,i+chunkSize);
+          await db.from('polices').insert(chunk);
+        }
+      }
+      // Mettre à jour polices existantes
+      for(const u of pUpdate){
+        const id=u.id; delete u.id;
+        await db.from('polices').update(u).eq('id',id);
+      }
+
+      bar.style.width='100%';
+
+      // ===== RÉSUMÉ =====
+      const resume=`Bordereau : ${b_nouvelles} nouvelles · ${b_maj} mises à jour${b_err?' · '+b_err+' erreurs':''} | Polices app : ${p_nouvelles} nouvelles · ${p_maj} mises à jour`;
+      msg.textContent='✅ '+resume;
+      showToast(`✅ Synchronisation terminée ! ${b_nouvelles+p_nouvelles} nouvelles, ${b_maj+p_maj} mises à jour`);
+      setTimeout(()=>charger(),1500);
+
+    }catch(err){
+      console.error(err);
+      msg.textContent='❌ Erreur : '+err.message;
+      showToast('❌ Erreur d\'import : '+err.message);
+    }
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+function parseDate(s){
+  if(!s)return null;
+  const parts=s.split('/');
+  if(parts.length===3)return`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+  return null;
+}
+function parseNum(s){
+  if(!s||s==='-')return 0;
+  return parseFloat(s.replace(',','.').replace(/\s/g,''))||0;
+}
+
+// ===== PAIEMENTS COMPAGNIE =====
+function ouvrirNouveauPaiement(){
+  document.getElementById('pay-modal').classList.add('open');
+  document.getElementById('pay-date').value=new Date().toISOString().split('T')[0];
+}
+function fermerPaiement(){document.getElementById('pay-modal').classList.remove('open');}
+
+async function sauvegarderPaiement(){
+  const ref=document.getElementById('pay-ref').value.trim();
+  const date=document.getElementById('pay-date').value;
+  const heure=document.getElementById('pay-heure').value.trim();
+  const montant=parseFloat(document.getElementById('pay-montant').value)||0;
+  const notes=document.getElementById('pay-notes').value.trim();
+  if(!ref||!date||!montant){showToast('⚠️ Référence, date et montant requis');return;}
+  const{error}=await db.from('paiements_compagnie').insert({reference:ref,heure,date_paiement:date,montant,notes,mode:'mobile_money'});
+  if(error){showToast('❌ '+error.message);return;}
+  fermerPaiement();
+  showToast('✅ Paiement enregistré ! Cochez maintenant les polices concernées.');
+  chargerPaiements();
+  ['pay-ref','pay-heure','pay-montant','pay-notes'].forEach(id=>{document.getElementById(id).value='';});
+}
+
+async function chargerPaiements(){
+  const{data}=await db.from('paiements_compagnie').select('*').order('date_paiement',{ascending:false});
+  const el=document.getElementById('timeline-paiements');
+  if(!data||!data.length){el.innerHTML='<div class="empty"><div class="empty-icon">💸</div><div class="empty-title">Aucun paiement enregistré</div><div style="font-size:13px;color:var(--t3);margin-top:6px">Cliquez "Saisir paiement reçu" pour enregistrer un reversement</div></div>';return;}
+  const total=data.reduce((s,p)=>s+(p.montant||0),0);
+  el.innerHTML=`<div style="padding:12px 20px;background:var(--g-light);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700;color:var(--g1)">${data.length} paiement(s) reçu(s) de la compagnie</span><span style="font-size:16px;font-weight:800;color:var(--g1)">${fmtGNF(Math.round(total))}</span></div>`+
+    data.map(p=>`<div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-body">
+        <div class="tl-ref">${p.reference||'—'}</div>
+        <div class="tl-info">${fmtD(p.date_paiement)}${p.heure?' à '+p.heure:''} · ${p.mode||'Mobile Money'}${p.notes?' · '+p.notes:''}</div>
+      </div>
+      <div class="tl-right">
+        <div class="tl-amount">${fmtGNF(Math.round(p.montant||0))}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ===== EXPORT =====
+async function exporterBordereau(){
+  showToast('⏳ Export en cours…');
+  const list=getFiltered();
+  const wb=XLSX.utils.book_new();
+  const headers=['N° Police','N° Quittance','Client','Rapporteur','Branche','État','Date du','Date au','Prime TTC','Commission due','Comm. payée cie','Reste','Commission reçue ✓','Date réception','Réf. paiement'];
+  const rows=list.map(r=>[r.n_police,r.n_quittance,r.client_nom,r.rapporteur,r.code_sous_branche,r.etat_mvt,fmtD(r.date_du),fmtD(r.date_au),Math.round(r.prime_total||0),Math.round(r.commission_agence||0),Math.round(r.commission_paye_cie||0),Math.round((r.commission_agence||0)-(r.commission_paye_cie||0)),r.commission_recue?'Oui':'Non',r.date_reception?fmtD(r.date_reception):'',r.reference_paiement||'']);
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  ws['!cols']=[14,14,20,16,10,6,10,10,14,14,14,14,10,12,16].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'Bordereau commissions');
+  XLSX.writeFile(wb,'LANALA_Commissions_'+new Date().toLocaleDateString('fr-FR').replace(/\//g,'-')+'.xlsx');
+  showToast('✅ Export Excel téléchargé !');
+}
+
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+
+// Démarrage
+charger();
+</script>
+</body>
+</html>
