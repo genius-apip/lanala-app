@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LANALA · Commissions & Cotation</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g1:#0A5C47;--g2:#0F7A60;--g3:#1A9E80;--gl:#E8F5F1;--gm:#C5E8DF;
+  --gold:#C8943A;--goldl:#FDF3E3;--goldd:#7A5A1A;
+  --rouge:#C0392B;--rougel:#FDECEA;
+  --bleu:#1A5276;--bleul:#EBF5FB;
+  --amber:#D4AC0D;--amberl:#FEFDE7;
+  --bg:#EFF4F2;--sur:#fff;--s2:#F7FAFA;--s3:#EFF5F2;
+  --t1:#0B1F1A;--t2:#2C4A3E;--t3:#5A7A6E;--t4:#9AAFA7;
+  --brd:#D0DDD9;--brd2:#B0C8C2;
+  --sh:0 1px 4px rgba(10,92,71,.07);--shm:0 4px 16px rgba(10,92,71,.10);--shl:0 12px 40px rgba(10,92,71,.14);
+  --r:8px;--rl:14px;--rxl:20px;
+  --f:'Inter',-apple-system,sans-serif;
+}
+html,body{min-height:100%;font-family:var(--f);font-size:13px;color:var(--t1);background:var(--bg)}
+/* HEADER */
+#hdr{background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 55%,var(--g3) 100%);padding:0 24px;display:flex;align-items:center;gap:10px;height:56px;position:sticky;top:0;z-index:200;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.hl{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.hs{font-size:10px;color:rgba(255,255,255,.55)}
+.hsp{flex:1}
+.hbtn{padding:6px 13px;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;border:none;font-family:var(--f);display:flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap}
+.hbtn-g{background:rgba(255,255,255,.13);color:#fff}.hbtn-g:hover{background:rgba(255,255,255,.22)}
+.hbtn-gold{background:var(--gold);color:#fff}.hbtn-gold:hover{background:var(--goldd)}
+.hbtn-grn{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.25)}.hbtn-grn:hover{background:rgba(255,255,255,.28)}
+/* TABS */
+#tabs{background:var(--sur);border-bottom:1px solid var(--brd);display:flex;padding:0 24px;gap:0;position:sticky;top:56px;z-index:100;overflow-x:auto}
+.tab{padding:11px 16px;font-size:12px;font-weight:600;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.tab:hover{color:var(--t1);background:var(--s2)}.tab.active{color:var(--g1);border-bottom-color:var(--g1)}
+.tbadge{background:var(--rouge);color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:20px}
+/* CONTENT */
+#content{padding:20px 24px;max-width:1600px;margin:0 auto}
+/* MONTH CHIPS */
+.month-bar{display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.mc{padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--brd);cursor:pointer;background:var(--sur);color:var(--t2);transition:all .15s;white-space:nowrap}
+.mc:hover{border-color:var(--g1);color:var(--g1)}.mc.on{background:var(--g1);color:#fff;border-color:var(--g1)}
+/* KPIs */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--sur);border-radius:var(--rl);padding:14px 16px;border:1px solid var(--brd);box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;width:68px;height:68px;border-radius:50%;top:-16px;right:-16px;opacity:.07;background:currentColor}
+.kpi-ico{font-size:18px;margin-bottom:7px;position:relative;z-index:1}
+.kpi-val{font-size:20px;font-weight:800;letter-spacing:-1px;line-height:1;position:relative;z-index:1}
+.kpi-lbl{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;position:relative;z-index:1}
+.kpi-sub{font-size:10px;color:var(--t4);margin-top:3px;position:relative;z-index:1}
+.kpi-badge{position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px}
+.kv-g{color:var(--g1)}.kv-gold{color:var(--goldd)}.kv-r{color:var(--rouge)}.kv-b{color:var(--bleu)}.kv-a{color:var(--amber)}
+.kb-up{background:var(--gl);color:var(--g1)}.kb-dn{background:var(--rougel);color:var(--rouge)}.kb-w{background:var(--amberl);color:#7A6200}
+/* PROGRESS */
+.prog-card{background:var(--sur);border-radius:var(--rl);padding:16px 20px;border:1px solid var(--brd);box-shadow:var(--sh);margin-bottom:18px}
+.prog-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.prog-title{font-size:13px;font-weight:700}.prog-pct{font-size:24px;font-weight:800;color:var(--g1)}
+.prog-track{height:9px;background:var(--brd);border-radius:5px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--g1),var(--g3));border-radius:5px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.prog-lbl{display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--t3)}
+.segs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.seg{border-radius:var(--r);padding:9px 10px;border-left:3px solid var(--g1)}
+.sg{background:var(--gl)}.sg .sv{color:var(--g1)}
+.sgold{background:var(--goldl);border-left-color:var(--gold)}.sgold .sv{color:var(--goldd)}
+.sr{background:var(--rougel);border-left-color:var(--rouge)}.sr .sv{color:var(--rouge)}
+.sb{background:var(--bleul);border-left-color:var(--bleu)}.sb .sv{color:var(--bleu)}
+.sl_{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.3px}
+.sv{font-size:15px;font-weight:800;margin-top:3px}
+/* CHARTS */
+.charts-row{display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr;gap:12px;margin-bottom:18px}
+.chart-card{background:var(--sur);border-radius:var(--rl);padding:14px 18px;border:1px solid var(--brd);box-shadow:var(--sh)}
+.chart-title{font-size:12px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.chart-wrap{position:relative;height:170px}
+/* TOOLBAR */
+.toolbar{background:var(--sur);border:1px solid var(--brd);border-radius:var(--rl) var(--rl) 0 0;padding:10px 14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.tbar-title{font-size:13px;font-weight:700;flex:1}.tbar-count{font-size:11px;color:var(--t3);font-weight:400}
+.fc{padding:4px 9px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--brd);cursor:pointer;background:var(--sur);color:var(--t2);transition:all .15s}
+.fc:hover{border-color:var(--g1);color:var(--g1)}.fc.on{background:var(--g1);color:#fff;border-color:var(--g1)}
+.fc.farr.on{background:var(--rouge);border-color:var(--rouge)}.fc.fnp.on{background:var(--goldd);border-color:var(--goldd)}
+.srch{padding:7px 12px 7px 28px;border:1px solid var(--brd);border-radius:20px;font-size:12px;font-family:var(--f);outline:none;background:var(--s2);width:170px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239AAFA7' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:8px center}
+.srch:focus{border-color:var(--g1)}
+.sf{padding:6px 26px 6px 9px;border:1px solid var(--brd);border-radius:20px;font-size:11px;font-family:var(--f);outline:none;background:var(--s2);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%235A7A6E' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;color:var(--t2)}
+/* BOUTONS */
+.btn{padding:7px 13px;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:var(--f);display:inline-flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--g1);color:#fff}.btn-p:hover{background:var(--g2)}
+.btn-s{background:var(--s3);color:var(--t1);border:1px solid var(--brd)}.btn-s:hover{background:var(--brd)}
+.btn-d{background:var(--rougel);color:var(--rouge);border:1px solid rgba(192,57,43,.15)}.btn-d:hover{background:var(--rouge);color:#fff}
+.btn-gold{background:var(--gold);color:#fff}.btn-gold:hover{background:var(--goldd)}
+/* TABLE */
+.tbl-wrap{overflow-x:auto;max-height:450px;overflow-y:auto;border:1px solid var(--brd);border-top:none;border-radius:0 0 var(--rl) var(--rl)}
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+thead th{padding:8px 11px;font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;text-align:left;background:var(--s3);border-bottom:1px solid var(--brd);position:sticky;top:0;z-index:5;white-space:nowrap}
+th.tr,td.tr{text-align:right}.th.tc,td.tc{text-align:center}
+td{padding:8px 11px;border-bottom:1px solid var(--brd);color:var(--t1);white-space:nowrap}
+tr:last-child td{border-bottom:none}.r-arr td{background:#FFF8F8}.r-arr:hover td{background:#FDECEA}
+tr:hover td{background:#F5FAF8}
+/* EDITABLE */
+.editable{cursor:pointer;border-bottom:1px dashed var(--brd2);padding:2px 4px;border-radius:3px;display:inline-block;transition:all .15s}
+.editable:hover{background:var(--gl);border-bottom-color:var(--g1);color:var(--g1)}
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700}
+.b-reg{background:var(--gl);color:var(--g1)}.b-arr{background:var(--rougel);color:var(--rouge)}
+/* CHECK */
+.chk{width:15px;height:15px;border:2px solid var(--brd2);border-radius:3px;display:flex;align-items:center;justify-content:center;margin:0 auto;transition:all .15s;cursor:pointer}
+.chk.on{background:var(--g1);border-color:var(--g1)}.chk.on::after{content:'✓';font-size:9px;font-weight:700;color:#fff}
+/* TFOOT */
+.tbl-foot{border:1px solid var(--brd);border-top:2px solid var(--g1);border-radius:0 0 var(--rl) var(--rl);display:flex;flex-wrap:wrap;padding:8px;background:var(--gl)}
+.fc_{padding:4px 10px;text-align:right;flex:1;min-width:110px}
+.fl{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase}.fv{font-size:13px;font-weight:800;margin-top:2px}
+/* MODAL */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(3px)}
+.ov.op{opacity:1;pointer-events:all}
+.modal{background:var(--sur);border-radius:var(--rxl);width:100%;max-width:540px;max-height:88vh;overflow-y:auto;box-shadow:var(--shl);transform:scale(.96) translateY(6px);transition:all .22s cubic-bezier(.34,1.56,.64,1);opacity:0}
+.ov.op .modal{transform:scale(1) translateY(0);opacity:1}
+.mhd{padding:16px 20px 12px;border-bottom:1px solid var(--brd);display:flex;align-items:flex-start;justify-content:space-between;position:sticky;top:0;background:var(--sur);z-index:10}
+.mt{font-size:15px;font-weight:700}.ms{font-size:11px;color:var(--t3);margin-top:2px}
+.mx{width:26px;height:26px;border-radius:50%;border:none;background:var(--s3);color:var(--t3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.mx:hover{background:var(--brd);color:var(--t1)}
+.mbody{padding:16px 20px}
+.mft{padding:10px 20px 16px;border-top:1px solid var(--brd);display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--sur)}
+/* FORMS */
+.fg{margin-bottom:11px}
+.fg label{font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:3px}
+.fg input,.fg select,.fg textarea{width:100%;padding:8px 10px;font-size:12px;border:1px solid var(--brd);border-radius:var(--r);color:var(--t1);background:var(--sur);outline:none;font-family:var(--f);transition:border-color .15s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--g1)}
+.fg select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%235A7A6E' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:26px}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.hint{font-size:10px;color:var(--t3);margin-top:3px}
+.alert-box{display:flex;gap:8px;padding:9px 11px;border-radius:var(--r);margin-bottom:11px;font-size:11px}
+.ab-g{background:var(--gl);color:var(--g1)}.ab-gold{background:var(--goldl);color:var(--goldd)}.ab-r{background:var(--rougel);color:var(--rouge)}
+/* TIMELINE */
+.tl-item{display:flex;gap:10px;padding:11px 16px;border-bottom:1px solid var(--brd);align-items:flex-start;transition:background .1s}
+.tl-item:hover{background:var(--s2)}.tl-dot{width:8px;height:8px;border-radius:50%;background:var(--g1);margin-top:4px;flex-shrink:0}
+.tl-ref{font-size:12px;font-weight:700;font-family:monospace}.tl-info{font-size:10px;color:var(--t3);margin-top:2px}.tl-amt{font-size:13px;font-weight:800;color:var(--g1)}
+/* IMPORT */
+.iz{border:2px dashed var(--brd2);border-radius:var(--rl);padding:24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--sur);margin-bottom:16px}
+.iz:hover,.iz.drag{border-color:var(--g1);background:var(--gl)}
+.pb{height:6px;background:var(--brd);border-radius:3px;overflow:hidden;margin:8px 0}.pbf{height:100%;background:linear-gradient(90deg,var(--g1),var(--g3));border-radius:3px;transition:width .3s}
+/* TARIFS EDITION */
+.tarif-section{background:var(--sur);border-radius:var(--rl);border:1px solid var(--brd);box-shadow:var(--sh);overflow:hidden;margin-bottom:14px}
+.tarif-hd{padding:11px 16px;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between;background:var(--s3)}
+.tarif-hd-title{font-size:12px;font-weight:700}
+table.ttarif{width:100%;border-collapse:collapse;font-size:12px}
+.ttarif th{padding:7px 12px;font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;background:var(--s3);border-bottom:1px solid var(--brd);text-align:left}
+.ttarif td{padding:7px 12px;border-bottom:1px solid var(--brd)}
+.ttarif tr:last-child td{border-bottom:none}.ttarif tr:hover td{background:var(--gl)}
+.tarif-inp{width:100%;padding:4px 6px;border:1px solid transparent;border-radius:4px;font-size:12px;font-family:var(--f);background:transparent;outline:none;text-align:right;color:var(--t1)}
+.tarif-inp:focus{border-color:var(--g1);background:var(--sur)}
+/* TOAST */
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--t1);color:#fff;padding:9px 16px;border-radius:30px;font-size:12px;font-weight:600;z-index:500;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;max-width:92vw;box-shadow:var(--shl)}
+.toast.sh{transform:translateX(-50%) translateY(0)}
+/* LOADING */
+.loading{display:flex;align-items:center;justify-content:center;padding:36px;gap:10px;color:var(--t3)}
+.spinner{width:20px;height:20px;border:2px solid var(--brd);border-top-color:var(--g1);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:36px;color:var(--t3)}
+.empty-icon{font-size:32px;margin-bottom:8px;opacity:.4}.empty-title{font-size:14px;font-weight:700;color:var(--t2);margin-bottom:4px}
+@media(max-width:900px){
+  #content{padding:14px}
+  .charts-row{grid-template-columns:1fr 1fr}
+  .segs{grid-template-columns:1fr 1fr}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  #hdr{gap:6px;padding:0 12px}
+  .hl{font-size:14px}
+  .hbtn span{display:none}
+}
+</style>
+</head>
+<body>
+<div id="hdr">
+  <div><div class="hl">🛡️ LANALA · Commissions & Cotation</div><div class="hs">Agence Kaloum · Code 140</div></div>
+  <div class="hsp"></div>
+  <button class="hbtn hbtn-g" onclick="location.href='index.html'">← <span>Retour app</span></button>
+  <button class="hbtn hbtn-grn" onclick="switchTab('import')">📂 <span>Importer</span></button>
+  <button class="hbtn hbtn-grn" onclick="ouvrirSaisieManuelle()">✏️ <span>Saisie manuelle</span></button>
+  <button class="hbtn hbtn-gold" onclick="ouvrirNouveauPaiement()">💰 <span>Paiement reçu</span></button>
+</div>
+<div id="tabs">
+  <div class="tab active" id="tab-dashboard" onclick="switchTab('dashboard')">📊 Tableau de bord</div>
+  <div class="tab" id="tab-bordereau" onclick="switchTab('bordereau')">📋 Bordereau <span class="tbadge" id="badge-arr" style="display:none">0</span></div>
+  <div class="tab" id="tab-paiements" onclick="switchTab('paiements')">💸 Paiements reçus</div>
+  <div class="tab" id="tab-cotation" onclick="switchTab('cotation')">🧮 Cotation auto</div>
+  <div class="tab" id="tab-tarifs" onclick="switchTab('tarifs')">📐 Grille tarifaire</div>
+  <div class="tab" id="tab-import" onclick="switchTab('import')">📂 Import</div>
+</div>
+
+<div id="content">
+
+<!-- ===== DASHBOARD ===== -->
+<div id="pane-dashboard">
+  <div class="month-bar" id="month-bar"><span style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Période :</span><div class="mc on" id="mc-all" onclick="filtrerMois('all')">Toutes</div></div>
+  <div class="kpi-grid" id="kpi-grid"><div class="loading"><div class="spinner"></div></div></div>
+  <div class="prog-card">
+    <div class="prog-hd"><div><div class="prog-title">Taux de recouvrement des commissions</div><div style="font-size:10px;color:var(--t3);margin-top:2px">Commissions confirmées reçues vs commissions dues totales</div></div><div class="prog-pct" id="prog-pct">0%</div></div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="prog-lbl"><span id="pl-recue">0 GNF reçu</span><span id="pl-due">0 GNF dû</span></div>
+    <div class="segs">
+      <div class="seg sg"><div class="sl_">Commission due</div><div class="sv" id="sv-due">—</div></div>
+      <div class="seg sgold"><div class="sl_">Reversé cie (bordereau)</div><div class="sv" id="sv-cie">—</div></div>
+      <div class="seg sg"><div class="sl_">Reçu confirmé (cochées)</div><div class="sv" id="sv-recue">—</div></div>
+      <div class="seg sr"><div class="sl_">Reste à recevoir</div><div class="sv" id="sv-reste">—</div></div>
+    </div>
+  </div>
+  <div class="charts-row">
+    <div class="chart-card"><div class="chart-title">📈 Évolution mensuelle<span style="font-size:10px;color:var(--t3);font-weight:400">Due vs Reçue</span></div><div class="chart-wrap"><canvas id="ch-mois"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">🏢 Par sous-branche</div><div class="chart-wrap"><canvas id="ch-branche"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">📊 Commission / Branche</div><div class="chart-wrap"><canvas id="ch-branche2"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">🔵 Statut des polices</div><div class="chart-wrap"><canvas id="ch-statut"></canvas></div></div>
+  </div>
+  <div style="background:var(--sur);border-radius:var(--rl);border:1px solid var(--brd);box-shadow:var(--sh);overflow:hidden">
+    <div style="padding:10px 16px;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between"><div style="font-size:12px;font-weight:700">Top 10 polices par commission</div><button class="btn btn-s" style="font-size:11px" onclick="switchTab('bordereau')">Voir tout →</button></div>
+    <div id="top-polices"></div>
+  </div>
+</div>
+
+<!-- ===== BORDEREAU ===== -->
+<div id="pane-bordereau" style="display:none">
+  <div class="toolbar">
+    <div class="tbar-title">Détail des polices <span class="tbar-count" id="tbl-count"></span></div>
+    <div class="month-bar" id="month-bar-tbl" style="margin:0;gap:4px"><div class="mc on" id="tmc-all" onclick="filtrerMoisTbl('all')">Tous</div></div>
+    <div class="fc on" id="fc-all" onclick="filtrer('all')">Toutes</div>
+    <div class="fc farr" id="fc-arr" onclick="filtrer('arr')">ARR ⚠️</div>
+    <div class="fc fnp" id="fc-np" onclick="filtrer('nonpaye')">Non reçues</div>
+    <div class="fc" id="fc-recues" onclick="filtrer('recues')">✓ Reçues</div>
+    <select class="sf" id="sel-branche" onchange="filtrer(filtreActif)">
+      <option value="">Toutes branches</option>
+      <option value="5101">5101 — Auto Part.</option>
+      <option value="5102">5102 — Auto Flottes</option>
+      <option value="5104">5104 — Auto Com.</option>
+      <option value="5106">5106 — Auto Tiers</option>
+      <option value="9104">9104 — Risques Div.</option>
+    </select>
+    <input type="search" class="srch" placeholder="Rechercher client…" oninput="rechercher(this.value)"/>
+    <button class="btn btn-s" onclick="exporterExcel()">⬇️ Excel</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th style="width:30px;text-align:center" title="Commission reçue">✓</th>
+        <th>N° Police</th><th>Client</th><th>Branche</th>
+        <th style="text-align:center">État</th><th style="text-align:center">Mois</th>
+        <th class="tr">Prime TTC</th><th class="tr">Comm. due</th><th class="tr">Taux%</th>
+        <th class="tr">Reversé cie</th><th class="tr">Reçu de moi</th>
+        <th>Date réception</th><th>N° Bordereau pmt</th><th class="tr">Reste</th>
+        <th style="width:76px">Actions</th>
+      </tr></thead>
+      <tbody id="tbl-body"></tbody>
+    </table>
+  </div>
+  <div id="tbl-foot"></div>
+</div>
+
+<!-- ===== PAIEMENTS ===== -->
+<div id="pane-paiements" style="display:none">
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:14px">
+    <div>
+      <div style="background:var(--sur);border-radius:var(--rl);border:1px solid var(--brd);box-shadow:var(--sh);overflow:hidden">
+        <div style="padding:10px 16px;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between"><div style="font-size:12px;font-weight:700">Historique des paiements reçus de la compagnie</div><button class="btn btn-p" onclick="ouvrirNouveauPaiement()">+ Saisir paiement</button></div>
+        <div id="timeline-paie"></div>
+      </div>
+    </div>
+    <div>
+      <div style="background:linear-gradient(135deg,var(--g1),var(--g2));border-radius:var(--rl);padding:16px;color:#fff;margin-bottom:12px">
+        <div style="font-size:10px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Récapitulatif</div>
+        <div style="font-size:26px;font-weight:800;letter-spacing:-1px" id="total-paie-recus">0 GNF</div>
+        <div style="font-size:10px;opacity:.7;margin-top:3px" id="nb-paie-recus">0 paiement(s)</div>
+      </div>
+      <div style="background:var(--sur);border-radius:var(--rl);border:1px solid var(--brd);padding:12px 14px">
+        <div style="font-size:10px;font-weight:700;color:var(--t3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Comparaison financière</div>
+        <div id="comparaison-paie" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== COTATION ===== -->
+<div id="pane-cotation" style="display:none">
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start">
+    <div style="background:var(--sur);border-radius:var(--rl);border:1px solid var(--brd);box-shadow:var(--sh);padding:18px 20px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:16px;color:var(--g1)">🧮 Calculateur de prime AssurEx</div>
+      <!-- Durée -->
+      <div class="fg"><label>Durée de l'assurance</label>
+        <div style="display:flex;gap:8px">
+          <div class="dur-btn on" id="d12" onclick="setDur('12')"><span style="font-size:13px;font-weight:700">12 mois</span><br><span style="font-size:10px;color:var(--t3)">Toutes catégories</span></div>
+          <div class="dur-btn" id="d6" onclick="setDur('6')"><span style="font-size:13px;font-weight:700">6 mois</span><br><span style="font-size:10px;color:var(--t3)">AP uniquement</span></div>
+          <div class="dur-btn" id="d3" onclick="setDur('3')"><span style="font-size:13px;font-weight:700">3 mois</span><br><span style="font-size:10px;color:var(--t3)">TPC uniquement</span></div>
+        </div>
+        <style>.dur-btn{flex:1;border:2px solid var(--brd);border-radius:var(--r);padding:8px 10px;text-align:center;cursor:pointer;background:var(--sur);transition:all .15s}.dur-btn.on{border-color:var(--g1);background:var(--gl)}.dur-btn:hover{border-color:var(--g1)}</style>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>Catégorie *</label><select id="cot-cat" onchange="onCat()"><option value="">— Sélectionner —</option></select></div>
+        <div class="fg"><label>Marque</label><select id="cot-mrq"><option value="">— Catégorie d'abord —</option></select></div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>Puissance (CV/CC)</label><select id="cot-cv" onchange="onCv()"><option value="">— CV —</option></select></div>
+        <div class="fg"><label>Places</label><select id="cot-pl" onchange="calcP()"><option value="">— Places —</option></select></div>
+      </div>
+      <div class="fg"><label>Garantie</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <div class="gar-btn on" id="g-rc" onclick="setGar('RC')"><span style="font-size:11px;font-weight:700">RC</span></div>
+          <div class="gar-btn" id="g-rcc" onclick="setGar('RC+COND')"><span style="font-size:11px;font-weight:700">RC+COND</span></div>
+          <div class="gar-btn" id="g-rcca" onclick="setGar('RC+COND+AVR')"><span style="font-size:11px;font-weight:700">RC+COND+AVR</span></div>
+        </div>
+        <style>.gar-btn{border:2px solid var(--brd);border-radius:var(--r);padding:7px 12px;cursor:pointer;background:var(--sur);transition:all .15s}.gar-btn.on{border-color:var(--g1);background:var(--gl);color:var(--g1)}.gar-btn:hover{border-color:var(--g1)}</style>
+      </div>
+      <div style="border-top:1px solid var(--brd);padding-top:14px;margin-top:4px">
+        <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Informations client / véhicule (optionnel)</div>
+        <div class="fg-row">
+          <div class="fg"><label>Nom du client</label><input type="text" id="cot-nom" placeholder="NOM Prénom"/></div>
+          <div class="fg"><label>Téléphone</label><input type="tel" id="cot-tel" placeholder="6XX XX XX XX"/></div>
+        </div>
+        <div class="fg-3">
+          <div class="fg"><label>Modèle</label><input type="text" id="cot-mod" placeholder="Hilux"/></div>
+          <div class="fg"><label>Année</label><input type="text" id="cot-yr" placeholder="2022"/></div>
+          <div class="fg"><label>Couleur</label><input type="text" id="cot-col" placeholder="Blanc"/></div>
+        </div>
+      </div>
+    </div>
+    <!-- RÉSULTAT -->
+    <div>
+      <div id="cot-result" style="background:var(--sur);border-radius:var(--rl);border:1px solid var(--brd);box-shadow:var(--sh);padding:18px;margin-bottom:12px">
+        <div style="text-align:center;padding:20px;color:var(--t4)"><div style="font-size:32px">🧮</div><div style="font-size:13px;margin-top:8px">Sélectionnez les options<br>pour calculer la prime</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px" id="cot-actions" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== GRILLE TARIFAIRE ===== -->
+<div id="pane-tarifs" style="display:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div><div style="font-size:16px;font-weight:800">📐 Grille tarifaire</div><div style="font-size:11px;color:var(--t3);margin-top:2px">Barème officiel 2025 — Montants en GNF HT · Taux commission : <strong id="taux-comm-display">12%</strong></div></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-s" onclick="ouvrirModifTauxComm()">⚙️ Modifier taux comm.</button>
+      <button class="btn btn-p" onclick="sauvegarderTarifs()">💾 Sauvegarder les tarifs</button>
+    </div>
+  </div>
+  <div id="grille-tarifs"></div>
+</div>
+
+<!-- ===== IMPORT ===== -->
+<div id="pane-import" style="display:none">
+  <div class="iz" id="iz" onclick="document.getElementById('file-input').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="gererDrop(event)">
+    <div style="font-size:32px;margin-bottom:8px">📊</div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:4px">Importer votre bordereau compagnie</div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:12px">Glissez-déposez votre fichier TXT/TSV · Mise à jour sans doublons · Vos cases cochées sont préservées</div>
+    <button class="btn btn-p" onclick="event.stopPropagation();document.getElementById('file-input').click()">Choisir un fichier</button>
+    <div id="import-prog" style="display:none;max-width:380px;margin:10px auto 0">
+      <div class="pb"><div class="pbf" id="import-bar" style="width:0%"></div></div>
+      <div style="font-size:11px;color:var(--t3);text-align:center" id="import-msg">Traitement...</div>
+    </div>
+  </div>
+  <div style="background:var(--sur);border-radius:var(--rl);border:1px solid var(--brd);padding:16px 18px">
+    <div style="font-size:12px;font-weight:700;margin-bottom:10px">Format attendu du fichier bordereau</div>
+    <div style="font-size:11px;color:var(--t3);line-height:1.8">
+      Fichier texte (.TXT) téléchargé depuis la plateforme compagnie. Colonnes séparées par tabulations :<br>
+      <strong>N°Police · N°Quittance · Type · DateDu · DateAu · PrimeNette · Frais · Taxes · PrimeTotale · PrimeEncaissée · [col] · CommissionAgence · CommissionPayée · État · [col] · Branche · SousBranche · Client...</strong><br><br>
+      ✅ <strong>Anti-doublons :</strong> Mise à jour financière sans écraser vos cases cochées ni références de paiement.<br>
+      ✅ <strong>Double synchronisation :</strong> Polices mises à jour aussi dans l'application principale.
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<input type="file" id="file-input" accept=".txt,.tsv,.csv" style="display:none" onchange="importerFichier(this.files[0])"/>
+
+<!-- MODAL PAIEMENT -->
+<div class="ov" id="ov-paie" onclick="fermerOv('ov-paie',event)">
+  <div class="modal">
+    <div class="mhd"><div><div class="mt">💰 Saisir un paiement reçu</div><div class="ms">Enregistrez un reversement de commission de la compagnie</div></div><button class="mx" onclick="fermerModal('ov-paie')">✕</button></div>
+    <div class="mbody">
+      <div class="alert-box ab-g">💡 Après enregistrement, cochez les polices concernées dans l'onglet Bordereau.</div>
+      <div class="fg"><label>Référence du paiement *</label><input type="text" id="p-ref" placeholder="Ex: #2445267895298"/><div class="hint">Telle qu'elle apparaît sur votre relevé Mobile Money</div></div>
+      <div class="fg-row"><div class="fg"><label>Date du paiement *</label><input type="date" id="p-date"/></div><div class="fg"><label>Heure</label><input type="text" id="p-heure" placeholder="17:06:36"/></div></div>
+      <div class="fg"><label>Montant reçu (GNF) *</label><input type="number" id="p-montant" placeholder="3 191 632"/></div>
+      <div class="fg"><label>Notes</label><textarea id="p-notes" rows="2" placeholder="Précisions..."></textarea></div>
+    </div>
+    <div class="mft"><button class="btn btn-s" onclick="fermerModal('ov-paie')">Annuler</button><button class="btn btn-p" onclick="sauvegarderPaiement()">✅ Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- MODAL SAISIE MANUELLE -->
+<div class="ov" id="ov-saisie" onclick="fermerOv('ov-saisie',event)">
+  <div class="modal">
+    <div class="mhd"><div><div class="mt">✏️ Saisie manuelle d'une police</div><div class="ms">Ajoutez une police sans importer de fichier</div></div><button class="mx" onclick="fermerModal('ov-saisie')">✕</button></div>
+    <div class="mbody">
+      <div class="fg-row"><div class="fg"><label>N° Police *</label><input type="text" id="sm-pol" placeholder="10405106260028"/></div><div class="fg"><label>N° Quittance</label><input type="text" id="sm-quit" placeholder="120260700xxx"/></div></div>
+      <div class="fg"><label>Nom du client *</label><input type="text" id="sm-client" placeholder="NOM Prénom"/></div>
+      <div class="fg-row">
+        <div class="fg"><label>Sous-branche</label><select id="sm-branche"><option value="5101">5101 — Auto Part.</option><option value="5102">5102 — Auto Flottes</option><option value="5104">5104 — Auto Com.</option><option value="5106" selected>5106 — Auto Tiers</option><option value="9104">9104 — Risques Div.</option></select></div>
+        <div class="fg"><label>État</label><select id="sm-etat"><option value="REG">REG — Régulier</option><option value="ARR">ARR — Arriéré</option></select></div>
+      </div>
+      <div class="fg-row"><div class="fg"><label>Date début</label><input type="date" id="sm-du"/></div><div class="fg"><label>Date fin</label><input type="date" id="sm-au"/></div></div>
+      <div class="fg-row"><div class="fg"><label>Prime TTC (GNF)</label><input type="number" id="sm-prime" placeholder="458572"/></div><div class="fg"><label>Prime encaissée (GNF)</label><input type="number" id="sm-enc" placeholder="458572"/></div></div>
+      <div class="fg-row"><div class="fg"><label>Commission agence (GNF) *</label><input type="number" id="sm-comm" placeholder="77644"/><div class="hint">Montant exact du bordereau compagnie</div></div><div class="fg"><label>Comm. payée par cie</label><input type="number" id="sm-pcie" placeholder="77644"/></div></div>
+      <div class="fg"><label>Rapporteur</label><input type="text" id="sm-rap" placeholder="Nom du saisisseur"/></div>
+    </div>
+    <div class="mft"><button class="btn btn-s" onclick="fermerModal('ov-saisie')">Annuler</button><button class="btn btn-p" onclick="sauvegarderManuel()">✅ Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- MODAL REVERSEMENT PAR LIGNE -->
+<div class="ov" id="ov-rev" onclick="fermerOv('ov-rev',event)">
+  <div class="modal">
+    <div class="mhd"><div><div class="mt" id="rev-title">Reversement sur police</div><div class="ms" id="rev-sub"></div></div><button class="mx" onclick="fermerModal('ov-rev')">✕</button></div>
+    <div class="mbody">
+      <div class="fg"><label>Montant reçu de moi (GNF) *</label><input type="number" id="rev-montant" placeholder="Ex: 53486"/></div>
+      <div class="fg-row"><div class="fg"><label>Date de réception *</label><input type="date" id="rev-date"/></div><div class="fg"><label>N° Bordereau paiement</label><input type="text" id="rev-ref" placeholder="Ex: #2445267895298"/></div></div>
+    </div>
+    <div class="mft"><button class="btn btn-s" onclick="fermerModal('ov-rev')">Annuler</button><button class="btn btn-p" onclick="sauvegarderReversement()">✅ Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- MODAL TAUX COMMISSION -->
+<div class="ov" id="ov-taux" onclick="fermerOv('ov-taux',event)">
+  <div class="modal">
+    <div class="mhd"><div><div class="mt">⚙️ Modifier le taux de commission</div><div class="ms">Taux appliqué pour le calcul de la commission agent</div></div><button class="mx" onclick="fermerModal('ov-taux')">✕</button></div>
+    <div class="mbody">
+      <div class="alert-box ab-gold">⚠️ Cette modification affectera les calculs de cotation. Elle ne recalcule pas rétroactivement le bordereau importé.</div>
+      <div class="fg"><label>Taux de commission (%)</label><input type="number" id="taux-inp" placeholder="12" min="0" max="30" step="0.1"/><div class="hint">Exemple : 12 pour 12%</div></div>
+    </div>
+    <div class="mft"><button class="btn btn-s" onclick="fermerModal('ov-taux')">Annuler</button><button class="btn btn-p" onclick="sauvegarderTauxComm()">✅ Enregistrer</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+const SURL='https://tvchylzpgymeamttuxhq.supabase.co';
+const SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2Y2h5bHpwZ3ltZWFtdHR1eGhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMTIwNTQsImV4cCI6MjA5OTc4ODA1NH0.LfGe6k-US-IwwadGQG005BxKO0EKltt9mAYM-hEYN4A';
+const{createClient}=supabase;const db=createClient(SURL,SKEY);
+
+// ===== ÉTAT GLOBAL =====
+let allData=[],filtreActif='all',rechercheQ='',moisActif='all',moisTblActif='all',brancheFiltre='',revPoliceId=null;
+let charts={},tauxCommission=0.12,tarifs=null;
+
+const BN={'5101':'Auto Part.','5102':'Auto Flotte','5104':'Auto Com.','5106':'Auto Tiers','5116':'Auto Tiers','9104':'Risques div.'};
+const BT={'5101':'Automobile','5102':'Automobile','5104':'Automobile','5106':'Automobile','5116':'Automobile','9104':'Risques divers'};
+
+const fmt=n=>(n||n===0)?Math.round(n).toLocaleString('fr-FR'):'—';
+const fmtG=n=>fmt(n)+' GNF';
+const fmtD=d=>d?new Date(d).toLocaleDateString('fr-FR'):'—';
+const moisLabel=d=>{if(!d)return'—';const dt=new Date(d);return dt.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'});};
+const moisKey=d=>{if(!d)return'';const dt=new Date(d);return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');};
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('sh');setTimeout(()=>t.classList.remove('sh'),3200);}
+
+// ===== TABS =====
+function switchTab(t){
+  ['dashboard','bordereau','paiements','cotation','tarifs','import'].forEach(x=>{
+    document.getElementById('pane-'+x).style.display=x===t?'block':'none';
+    document.getElementById('tab-'+x).classList.toggle('active',x===t);
+  });
+  if(t==='paiements')chargerPaiements();
+  if(t==='tarifs')renderGrilleTarifs();
+}
+
+// ===== CHARGEMENT PRINCIPAL =====
+async function charger(){
+  const{data}=await db.from('bordereau_compagnie').select('*').order('date_du',{ascending:false});
+  allData=data||[];
+  genererFiltresMois();renderKPIs();renderCharts();renderTable();renderTopPolices();
+  const nb=allData.filter(r=>r.etat_mvt==='ARR').length;
+  const b=document.getElementById('badge-arr');if(nb>0){b.textContent=nb;b.style.display='inline-flex';}
+}
+
+// ===== FILTRES MOIS =====
+function genererFiltresMois(){
+  const mois={};allData.forEach(r=>{if(r.date_du){const k=moisKey(r.date_du);if(!mois[k])mois[k]=0;mois[k]++;}});
+  const sorted=Object.keys(mois).sort().reverse();
+  const mb=document.getElementById('month-bar');
+  mb.innerHTML='<span style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Période :</span><div class="mc on" id="mc-all" onclick="filtrerMois(\'all\')">Toutes</div>';
+  sorted.forEach(k=>{const d=new Date(k+'-01');const lbl=d.toLocaleDateString('fr-FR',{month:'short',year:'numeric'});mb.innerHTML+=`<div class="mc" id="mc-${k}" onclick="filtrerMois('${k}')">${lbl} <span style="opacity:.6">(${mois[k]})</span></div>`;});
+  const mb2=document.getElementById('month-bar-tbl');
+  mb2.innerHTML='<div class="mc on" id="tmc-all" onclick="filtrerMoisTbl(\'all\')">Tous</div>';
+  sorted.forEach(k=>{const d=new Date(k+'-01');mb2.innerHTML+=`<div class="mc" id="tmc-${k}" onclick="filtrerMoisTbl('${k}')">${d.toLocaleDateString('fr-FR',{month:'short',year:'numeric'})}</div>`;});
+}
+function filtrerMois(k){moisActif=k;document.querySelectorAll('#month-bar .mc').forEach(c=>c.classList.remove('on'));document.getElementById('mc-'+(k==='all'?'all':k))?.classList.add('on');renderKPIs();renderCharts();renderTopPolices();}
+function filtrerMoisTbl(k){moisTblActif=k;document.querySelectorAll('#month-bar-tbl .mc').forEach(c=>c.classList.remove('on'));document.getElementById('tmc-'+(k==='all'?'all':k))?.classList.add('on');renderTable();}
+function getDataMois(){return moisActif==='all'?allData:allData.filter(r=>moisKey(r.date_du)===moisActif);}
+function getFiltered(){
+  let list=allData;
+  if(moisTblActif!=='all')list=list.filter(r=>moisKey(r.date_du)===moisTblActif);
+  if(filtreActif==='arr')list=list.filter(r=>r.etat_mvt==='ARR');
+  else if(filtreActif==='nonpaye')list=list.filter(r=>!r.commission_recue);
+  else if(filtreActif==='recues')list=list.filter(r=>r.commission_recue);
+  const br=document.getElementById('sel-branche')?.value||'';
+  if(br)list=list.filter(r=>r.code_sous_branche===br);
+  if(rechercheQ)list=list.filter(r=>(r.client_nom||'').toLowerCase().includes(rechercheQ)||(r.n_police||'').includes(rechercheQ));
+  return list;
+}
+function filtrer(f){filtreActif=f;['all','arr','np','recues'].forEach(x=>document.getElementById('fc-'+x)?.classList.remove('on'));const m={all:'fc-all',arr:'fc-arr',nonpaye:'fc-np',recues:'fc-recues'};if(m[f])document.getElementById(m[f])?.classList.add('on');renderTable();}
+function rechercher(q){rechercheQ=q.toLowerCase();renderTable();}
+
+// ===== KPIs =====
+function renderKPIs(){
+  const d=getDataMois();
+  const totDue=d.reduce((s,r)=>s+(r.commission_agence||0),0);
+  const totCie=d.reduce((s,r)=>s+(r.commission_paye_cie||0),0);
+  const totRecue=d.filter(r=>r.commission_recue).reduce((s,r)=>s+(r.commission_agence||0),0);
+  const reste=totDue-totRecue;
+  const nbArr=d.filter(r=>r.etat_mvt==='ARR').length;
+  const pct=totDue>0?Math.round(totRecue/totDue*100):0;
+  const totPrime=d.reduce((s,r)=>s+(r.prime_total||0),0);
+  document.getElementById('kpi-grid').innerHTML=`
+    <div class="kpi"><div class="kpi-ico">💼</div><div class="kpi-lbl">Commission due totale</div><div class="kpi-val kv-g">${fmt(Math.round(totDue))}</div><div class="kpi-sub">GNF · ${d.length} polices</div></div>
+    <div class="kpi"><div class="kpi-ico">✅</div><div class="kpi-lbl">Commissions reçues</div><div class="kpi-val kv-gold">${fmt(Math.round(totRecue))}</div><div class="kpi-sub">GNF · ${d.filter(r=>r.commission_recue).length} polices cochées</div><span class="kpi-badge kb-up">${pct}%</span></div>
+    <div class="kpi"><div class="kpi-ico">⏳</div><div class="kpi-lbl">Reste à recevoir</div><div class="kpi-val kv-r">${fmt(Math.round(reste))}</div><div class="kpi-sub">GNF · ${d.filter(r=>!r.commission_recue).length} polices</div><span class="kpi-badge kb-dn">${100-pct}%</span></div>
+    <div class="kpi"><div class="kpi-ico">🏦</div><div class="kpi-lbl">Reversé cie (bordereau)</div><div class="kpi-val kv-b">${fmt(Math.round(totCie))}</div><div class="kpi-sub">GNF selon bordereau</div></div>
+    <div class="kpi"><div class="kpi-ico">⚠️</div><div class="kpi-lbl">Polices ARR</div><div class="kpi-val kv-a">${nbArr}</div><div class="kpi-sub">Prime non encaissée</div><span class="kpi-badge kb-w">Attention</span></div>
+    <div class="kpi"><div class="kpi-ico">📊</div><div class="kpi-lbl">Prime TTC totale</div><div class="kpi-val" style="color:var(--t2)">${fmt(Math.round(totPrime))}</div><div class="kpi-sub">GNF encaissés</div></div>`;
+  document.getElementById('prog-pct').textContent=pct+'%';
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('pl-recue').textContent=fmtG(Math.round(totRecue))+' reçu confirmé';
+  document.getElementById('pl-due').textContent=fmtG(Math.round(totDue))+' dû total';
+  document.getElementById('sv-due').textContent=fmtG(Math.round(totDue));
+  document.getElementById('sv-cie').textContent=fmtG(Math.round(totCie));
+  document.getElementById('sv-recue').textContent=fmtG(Math.round(totRecue));
+  document.getElementById('sv-reste').textContent=fmtG(Math.round(reste));
+}
+
+// ===== GRAPHIQUES (4 graphiques dont 2 par branche) =====
+function renderCharts(){
+  const d=getDataMois();
+  // 1. Évolution mensuelle
+  const byM={};allData.forEach(r=>{const k=moisKey(r.date_du);if(!k)return;if(!byM[k])byM[k]={due:0,recue:0};byM[k].due+=(r.commission_agence||0);if(r.commission_recue)byM[k].recue+=(r.commission_agence||0);});
+  const mK=Object.keys(byM).sort();const mL=mK.map(k=>{const dt=new Date(k+'-01');return dt.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'});});
+  if(charts.mois)charts.mois.destroy();
+  charts.mois=new Chart(document.getElementById('ch-mois'),{type:'bar',data:{labels:mL,datasets:[{label:'Due',data:mK.map(k=>Math.round(byM[k].due)),backgroundColor:'rgba(10,92,71,.2)',borderColor:'#0A5C47',borderWidth:2,borderRadius:4},{label:'Reçue',data:mK.map(k=>Math.round(byM[k].recue)),backgroundColor:'rgba(200,148,58,.35)',borderColor:'#C8943A',borderWidth:2,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10},padding:6}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)} GNF`}}},scales:{y:{ticks:{callback:v=>fmt(v),font:{size:9}},grid:{color:'#E8F5F1'}},x:{ticks:{font:{size:9}}}}}});
+
+  // 2. Nombre de polices par sous-branche (camembert)
+  const byBrNb={};d.forEach(r=>{const b=BN[r.code_sous_branche]||r.code_sous_branche||'Autre';if(!byBrNb[b])byBrNb[b]=0;byBrNb[b]++;});
+  if(charts.branche)charts.branche.destroy();
+  charts.branche=new Chart(document.getElementById('ch-branche'),{type:'doughnut',data:{labels:Object.keys(byBrNb),datasets:[{data:Object.values(byBrNb),backgroundColor:['#0A5C47','#0F7A60','#1A9E80','#C8943A','#1A5276','#C0392B'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},padding:6,boxWidth:10}},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} police(s)`}}}}});
+
+  // 3. Commission par sous-branche (barres horizontales)
+  const byBrComm={};d.forEach(r=>{const b=BN[r.code_sous_branche]||r.code_sous_branche||'Autre';if(!byBrComm[b])byBrComm[b]=0;byBrComm[b]+=(r.commission_agence||0);});
+  const bLabels=Object.keys(byBrComm);const bVals=Object.values(byBrComm).map(v=>Math.round(v));
+  if(charts.branche2)charts.branche2.destroy();
+  charts.branche2=new Chart(document.getElementById('ch-branche2'),{type:'bar',data:{labels:bLabels,datasets:[{data:bVals,backgroundColor:['#0A5C47','#0F7A60','#1A9E80','#C8943A','#1A5276'],borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${fmt(c.raw)} GNF`}}},scales:{x:{ticks:{callback:v=>fmt(v),font:{size:9}},grid:{color:'#E8F5F1'}},y:{ticks:{font:{size:10}}}}}});
+
+  // 4. Statut polices
+  const reg=d.filter(r=>r.etat_mvt!=='ARR').length;const arr=d.filter(r=>r.etat_mvt==='ARR').length;
+  const recues=d.filter(r=>r.commission_recue).length;const attente=d.filter(r=>!r.commission_recue).length;
+  if(charts.statut)charts.statut.destroy();
+  charts.statut=new Chart(document.getElementById('ch-statut'),{type:'doughnut',data:{labels:['REG','ARR','Comm. reçue','En attente'],datasets:[{data:[reg,arr,recues,attente],backgroundColor:['#0A5C47','#C0392B','#C8943A','#1A5276'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},padding:6,boxWidth:10}},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw}`}}}}});
+}
+
+// ===== TOP POLICES =====
+function renderTopPolices(){
+  const d=getDataMois().sort((a,b)=>(b.commission_agence||0)-(a.commission_agence||0)).slice(0,10);
+  document.getElementById('top-polices').innerHTML=d.length?d.map((r,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--brd);${i===9?'border-bottom:none':''}">
+      <div style="width:20px;height:20px;border-radius:50%;background:${i<3?'var(--g1)':'var(--s3)'};color:${i<3?'#fff':'var(--t3)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${i+1}</div>
+      <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.client_nom||'—'}</div><div style="font-size:10px;color:var(--t3)">${r.n_police} · ${BN[r.code_sous_branche]||'—'} · ${moisLabel(r.date_du)}</div></div>
+      <div style="text-align:right;flex-shrink:0"><div style="font-size:12px;font-weight:700;color:var(--g1)">${fmt(Math.round(r.commission_agence||0))} GNF</div><div style="font-size:10px;color:var(--t3)">${r.prime_nette?Math.round((r.commission_agence/r.prime_nette)*100*10)/10:0}%</div></div>
+      <span class="badge ${r.etat_mvt==='ARR'?'b-arr':'b-reg'}">${r.etat_mvt||'REG'}</span>
+      <div class="chk ${r.commission_recue?'on':''}" onclick="toggleComm('${r.id}',${!r.commission_recue})" title="Marquer reçue"></div>
+    </div>`).join(''):'<div class="empty" style="padding:24px"><div class="empty-icon">📋</div><div class="empty-title">Aucune donnée</div></div>';
+}
+
+// ===== TABLEAU BORDEREAU =====
+function renderTable(){
+  const list=getFiltered();
+  document.getElementById('tbl-count').textContent='('+list.length+' / '+allData.length+')';
+  let totP=0,totD=0,totC=0,totR=0,totRe=0;
+  list.forEach(r=>{totP+=r.prime_total||0;totD+=r.commission_agence||0;totC+=r.commission_paye_cie||0;totR+=r.montant_recu||0;totRe+=(r.commission_agence||0)-(r.montant_recu||0);});
+  document.getElementById('tbl-body').innerHTML=list.map(r=>{
+    const taux=r.prime_nette&&r.prime_nette>0?Math.round((r.commission_agence/r.prime_nette)*1000)/10:0;
+    const reste=(r.commission_agence||0)-(r.montant_recu||0);
+    return`<tr class="${r.etat_mvt==='ARR'?'r-arr':''}" id="row-${r.id}">
+      <td style="text-align:center"><div class="chk ${r.commission_recue?'on':''}" id="chk-${r.id}" onclick="toggleComm('${r.id}',${!r.commission_recue})"></div></td>
+      <td style="font-family:monospace;font-size:10px">${r.n_police||'—'}</td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${r.client_nom||'—'}</td>
+      <td><span class="editable" onclick="editBranche('${r.id}','${r.code_sous_branche||''}')" title="Cliquer pour modifier">${BN[r.code_sous_branche]||r.code_sous_branche||'—'}</span></td>
+      <td style="text-align:center"><span class="badge ${r.etat_mvt==='ARR'?'b-arr':'b-reg'} editable" onclick="editEtat('${r.id}','${r.etat_mvt||'REG'}')" title="Cliquer pour modifier">${r.etat_mvt||'REG'}</span></td>
+      <td style="text-align:center;font-size:10px;color:var(--t3)">${moisLabel(r.date_du)}</td>
+      <td class="tr">${fmt(Math.round(r.prime_total||0))}</td>
+      <td class="tr" style="color:var(--g1);font-weight:700">${fmt(Math.round(r.commission_agence||0))}</td>
+      <td class="tr" style="color:var(--t3)">${taux}%</td>
+      <td class="tr" style="color:var(--goldd);font-weight:600">${fmt(Math.round(r.commission_paye_cie||0))}</td>
+      <td class="tr" style="color:${r.montant_recu?'var(--g1)':'var(--t4)'};font-weight:${r.montant_recu?'700':'400'};cursor:pointer" onclick="ouvrirReversement('${r.id}','${(r.client_nom||'').replace(/'/g,"\\'")}',${r.commission_agence||0})">${r.montant_recu?fmt(Math.round(r.montant_recu))+' ✏️':'<span style="color:var(--t4)">+ Saisir</span>'}</td>
+      <td style="font-size:10px;color:var(--t3)">${r.date_reception?fmtD(r.date_reception):'—'}</td>
+      <td style="font-size:10px;font-family:monospace;color:var(--t3)">${r.reference_paiement||'—'}</td>
+      <td class="tr" style="color:${reste>0?'var(--rouge)':'var(--g1)'};font-weight:700">${fmt(Math.round(reste))}</td>
+      <td><div style="display:flex;gap:3px">
+        <button class="btn btn-s" style="padding:3px 7px;font-size:10px" onclick="ouvrirReversement('${r.id}','${(r.client_nom||'').replace(/'/g,"\\'")}',${r.commission_agence||0})">💰</button>
+        <button class="btn btn-d" style="padding:3px 7px;font-size:10px" onclick="supprimerLigne('${r.id}')">🗑️</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tbl-foot').innerHTML=`<div class="fc_"><div class="fl">Polices</div><div class="fv">${list.length}</div></div><div class="fc_"><div class="fl">Prime TTC</div><div class="fv">${fmt(Math.round(totP))}</div></div><div class="fc_" style="border-left:1px solid var(--brd)"><div class="fl" style="color:var(--g1)">Comm. due</div><div class="fv" style="color:var(--g1)">${fmt(Math.round(totD))}</div></div><div class="fc_"><div class="fl" style="color:var(--goldd)">Reversé cie</div><div class="fv" style="color:var(--goldd)">${fmt(Math.round(totC))}</div></div><div class="fc_"><div class="fl" style="color:var(--g1)">Reçu de moi</div><div class="fv" style="color:var(--g1)">${fmt(Math.round(totR))}</div></div><div class="fc_" style="border-left:1px solid var(--brd)"><div class="fl" style="color:var(--rouge)">Reste à recevoir</div><div class="fv" style="color:var(--rouge)">${fmt(Math.round(totRe))}</div></div>`;
+}
+
+// ===== ACTIONS TABLEAU =====
+async function toggleComm(id,val){
+  await db.from('bordereau_compagnie').update({commission_recue:val,date_reception:val?new Date().toISOString().split('T')[0]:null}).eq('id',id);
+  const r=allData.find(x=>x.id===id);if(r){r.commission_recue=val;r.date_reception=val?new Date().toISOString().split('T')[0]:null;}
+  const chk=document.getElementById('chk-'+id);if(chk)chk.className='chk '+(val?'on':'');
+  renderKPIs();renderTopPolices();showToast(val?'✅ Commission marquée reçue':'↩️ Non reçue');
+}
+function editEtat(id,actuel){
+  const val=actuel==='REG'?'ARR':'REG';
+  db.from('bordereau_compagnie').update({etat_mvt:val}).eq('id',id).then(()=>{const r=allData.find(x=>x.id===id);if(r)r.etat_mvt=val;renderTable();renderKPIs();showToast('✅ État : '+val);});
+}
+function editBranche(id,actuel){
+  const opts=['5101','5102','5104','5106','9104'];
+  const noms={'5101':'5101 — Auto Particuliers','5102':'5102 — Auto Flottes','5104':'5104 — Auto Commerciaux','5106':'5106 — Auto Tiers','9104':'9104 — Risques Divers'};
+  const sel=prompt('Choisir la branche :\n'+opts.map((o,i)=>`${i+1}. ${noms[o]}`).join('\n')+'\n\nNuméro (1-5) :');
+  const idx=parseInt(sel)-1;
+  if(idx>=0&&idx<opts.length){const nb=opts[idx];db.from('bordereau_compagnie').update({code_sous_branche:nb}).eq('id',id).then(()=>{const r=allData.find(x=>x.id===id);if(r)r.code_sous_branche=nb;renderTable();renderCharts();showToast('✅ Branche : '+BN[nb]);});}
+}
+async function supprimerLigne(id){
+  if(!confirm('Supprimer cette police du bordereau ?'))return;
+  await db.from('bordereau_compagnie').delete().eq('id',id);
+  allData=allData.filter(r=>r.id!==id);renderTable();renderKPIs();renderCharts();showToast('🗑️ Ligne supprimée');
+}
+
+// ===== REVERSEMENT PAR LIGNE =====
+function ouvrirReversement(id,nom,commDue){
+  revPoliceId=id;const r=allData.find(x=>x.id===id);
+  document.getElementById('rev-title').textContent='Reversement — '+nom;
+  document.getElementById('rev-sub').textContent='Commission due : '+fmt(Math.round(commDue))+' GNF';
+  document.getElementById('rev-montant').value=r?.montant_recu||Math.round(commDue)||'';
+  document.getElementById('rev-date').value=r?.date_reception||new Date().toISOString().split('T')[0];
+  document.getElementById('rev-ref').value=r?.reference_paiement||'';
+  document.getElementById('ov-rev').classList.add('op');
+}
+async function sauvegarderReversement(){
+  const montant=parseFloat(document.getElementById('rev-montant').value)||0;
+  const date=document.getElementById('rev-date').value;
+  const ref=document.getElementById('rev-ref').value.trim();
+  if(!montant||!date){showToast('⚠️ Montant et date requis');return;}
+  await db.from('bordereau_compagnie').update({montant_recu:montant,commission_recue:true,date_reception:date,reference_paiement:ref||null}).eq('id',revPoliceId);
+  const r=allData.find(x=>x.id===revPoliceId);
+  if(r){r.montant_recu=montant;r.commission_recue=true;r.date_reception=date;r.reference_paiement=ref;}
+  fermerModal('ov-rev');renderTable();renderKPIs();showToast('✅ Reversement enregistré !');
+}
+
+// ===== SAISIE MANUELLE =====
+function ouvrirSaisieManuelle(){document.getElementById('ov-saisie').classList.add('op');}
+async function sauvegarderManuel(){
+  const n_police=document.getElementById('sm-pol').value.trim();
+  const client=document.getElementById('sm-client').value.trim();
+  const comm=parseFloat(document.getElementById('sm-comm').value)||0;
+  if(!n_police||!client){showToast('⚠️ N° police et client requis');return;}
+  const{error}=await db.from('bordereau_compagnie').insert({n_police,client_nom:client,n_quittance:document.getElementById('sm-quit').value||null,code_sous_branche:document.getElementById('sm-branche').value,etat_mvt:document.getElementById('sm-etat').value,date_du:document.getElementById('sm-du').value||null,date_au:document.getElementById('sm-au').value||null,prime_total:parseFloat(document.getElementById('sm-prime').value)||0,prime_encaissee:parseFloat(document.getElementById('sm-enc').value)||0,prime_nette:parseFloat(document.getElementById('sm-prime').value)||0,commission_agence:comm,commission_paye_cie:parseFloat(document.getElementById('sm-pcie').value)||0,rapporteur:document.getElementById('sm-rap').value||null,import_batch:'manuel-'+new Date().toISOString().split('T')[0]});
+  if(error){showToast('❌ '+error.message);return;}
+  fermerModal('ov-saisie');showToast('✅ Police ajoutée !');charger();
+}
+
+// ===== PAIEMENTS =====
+function ouvrirNouveauPaiement(){document.getElementById('p-date').value=new Date().toISOString().split('T')[0];document.getElementById('ov-paie').classList.add('op');}
+async function sauvegarderPaiement(){
+  const ref=document.getElementById('p-ref').value.trim();const date=document.getElementById('p-date').value;const montant=parseFloat(document.getElementById('p-montant').value)||0;
+  if(!ref||!date||!montant){showToast('⚠️ Référence, date et montant requis');return;}
+  await db.from('paiements_compagnie').insert({reference:ref,heure:document.getElementById('p-heure').value,date_paiement:date,montant,notes:document.getElementById('p-notes').value});
+  fermerModal('ov-paie');showToast('✅ Paiement enregistré !');chargerPaiements();['p-ref','p-heure','p-montant','p-notes'].forEach(id=>{document.getElementById(id).value='';});
+}
+async function chargerPaiements(){
+  const{data}=await db.from('paiements_compagnie').select('*').order('date_paiement',{ascending:false});
+  const totDue=allData.reduce((s,r)=>s+(r.commission_agence||0),0);
+  const totRec=allData.filter(r=>r.commission_recue).reduce((s,r)=>s+(r.commission_agence||0),0);
+  const totPaie=(data||[]).reduce((s,p)=>s+(p.montant||0),0);
+  document.getElementById('total-paie-recus').textContent=fmt(Math.round(totPaie))+' GNF';
+  document.getElementById('nb-paie-recus').textContent=(data||[]).length+' paiement(s)';
+  document.getElementById('comparaison-paie').innerHTML=`
+    <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--brd)"><span style="font-size:11px;color:var(--t3)">Commission due totale</span><span style="font-size:12px;font-weight:700">${fmt(Math.round(totDue))} GNF</span></div>
+    <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--brd)"><span style="font-size:11px;color:var(--t3)">Paiements saisis</span><span style="font-size:12px;font-weight:700;color:var(--g1)">${fmt(Math.round(totPaie))} GNF</span></div>
+    <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--brd)"><span style="font-size:11px;color:var(--t3)">Commissions cochées</span><span style="font-size:12px;font-weight:700;color:var(--goldd)">${fmt(Math.round(totRec))} GNF</span></div>
+    <div style="display:flex;justify-content:space-between;padding:7px 4px;background:var(--rougel);border-radius:var(--r);margin-top:4px"><span style="font-size:11px;font-weight:700;color:var(--rouge)">Reste à recevoir</span><span style="font-size:13px;font-weight:800;color:var(--rouge)">${fmt(Math.round(totDue-totRec))} GNF</span></div>`;
+  document.getElementById('timeline-paie').innerHTML=(data&&data.length)?data.map(p=>`
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div style="flex:1"><div class="tl-ref">${p.reference||'—'}</div><div class="tl-info">${fmtD(p.date_paiement)}${p.heure?' à '+p.heure:''} · Mobile Money${p.notes?' · '+p.notes:''}</div></div>
+      <div style="text-align:right"><div class="tl-amt">${fmt(Math.round(p.montant||0))} GNF</div><button class="btn btn-d" style="padding:2px 6px;font-size:10px;margin-top:3px" onclick="supprimerPaiement('${p.id}')">🗑️</button></div>
+    </div>`).join(''):'<div class="empty"><div class="empty-icon">💸</div><div class="empty-title">Aucun paiement enregistré</div></div>';
+}
+async function supprimerPaiement(id){if(!confirm('Supprimer ce paiement ?'))return;await db.from('paiements_compagnie').delete().eq('id',id);chargerPaiements();showToast('🗑️ Paiement supprimé');}
+
+// ===== IMPORT =====
+function ouvrirImport(){switchTab('import');}
+function gererDrop(e){e.preventDefault();document.getElementById('iz').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)importerFichier(f);}
+async function importerFichier(file){
+  if(!file)return;
+  const bar=document.getElementById('import-bar');const msg=document.getElementById('import-msg');
+  document.getElementById('import-prog').style.display='block';
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    try{
+      const text=e.target.result;const sep=text.includes('\t')?'\t':';';
+      const lignes=text.trim().split(/\r?\n/).filter(l=>l.trim());
+      msg.textContent='Analyse…';bar.style.width='10%';
+      const PP=[];
+      for(const ligne of lignes){
+        const parts=ligne.split(sep).map(s=>s.replace(/#/g,'').trim());
+        if(parts.length<12)continue;if(!parts[0]||!/^\d{10,16}$/.test(parts[0]))continue;
+        PP.push({n_police:parts[0],n_quittance:parts[1]||null,terme_comptant:parts[2]||'C',date_du:pd(parts[3]),date_au:pd(parts[4]),prime_nette:pn(parts[5]),frais:pn(parts[6]),taxes:pn(parts[7]),prime_total:pn(parts[8]),prime_encaissee:pn(parts[9]),commission_agence:pn(parts[11]),commission_paye_cie:pn(parts[12]),etat_mvt:(parts[13]||'REG').trim(),code_branche:parts[15]||null,code_sous_branche:parts[16]||null,client_nom:parts[17]||null,rapporteur:parts[21]||null,date_modif:pd(parts[19]),import_batch:new Date().toISOString().split('T')[0]});
+      }
+      if(!PP.length){msg.textContent='⚠️ Aucune police détectée.';showToast('⚠️ Format non reconnu');return;}
+      msg.textContent=`${PP.length} polices. Synchronisation…`;bar.style.width='20%';
+      const{data:exB}=await db.from('bordereau_compagnie').select('id,n_police,n_quittance,commission_recue,montant_recu,reference_paiement,date_reception');
+      const{data:exP}=await db.from('polices').select('id,n_police,n_quittance');
+      const mB={};(exB||[]).forEach(r=>{mB[r.n_police+'|'+(r.n_quittance||'')]=r;});
+      const mP={};(exP||[]).forEach(r=>{mP[r.n_police+'|'+(r.n_quittance||'')]=r;});
+      bar.style.width='35%';
+      let bN=0,bM=0,bE=0,pN=0,pM=0;
+      const ins=[],upd=[],pins=[],pupd=[];
+      for(const pol of PP){
+        const key=pol.n_police+'|'+(pol.n_quittance||'');
+        if(mB[key]){upd.push({id:mB[key].id,prime_nette:pol.prime_nette,prime_total:pol.prime_total,prime_encaissee:pol.prime_encaissee,commission_agence:pol.commission_agence,commission_paye_cie:pol.commission_paye_cie,etat_mvt:pol.etat_mvt,date_du:pol.date_du,date_au:pol.date_au});bM++;}
+        else{ins.push(pol);bN++;}
+        const type=BT[pol.code_sous_branche]||'Automobile';
+        const bc=pol.code_sous_branche?(pol.code_branche==='5000'?'5-':'9-')+pol.code_sous_branche.slice(-3):null;
+        if(mP[key]){pupd.push({id:mP[key].id,type_assurance:type,branche_code:bc,prime_ttc:Math.round(pol.prime_total),commission_agent:Math.round(pol.commission_agence),date_effet:pol.date_du,date_expiration:pol.date_au,n_quittance:pol.n_quittance});pM++;}
+        else{pins.push({n_police:pol.n_police,n_quittance:pol.n_quittance,client_nom:pol.client_nom||'—',type_assurance:type,branche_code:bc,date_effet:pol.date_du,date_expiration:pol.date_au,prime_ttc:Math.round(pol.prime_total),commission_agent:Math.round(pol.commission_agence),taux_apporteur:0,commission_apporteur_nette:0,prime_nette:Math.round(pol.prime_nette),frais_accessoires:Math.round(pol.frais||0),taxe:Math.round(pol.taxes||0),montant_encaisse:Math.round(pol.prime_encaissee),solde:Math.round(Math.max(0,pol.prime_total-pol.prime_encaissee))});pN++;}
+      }
+      for(let i=0;i<ins.length;i+=20){const{error}=await db.from('bordereau_compagnie').insert(ins.slice(i,i+20));if(error)bE+=Math.min(20,ins.length-i);}
+      for(let i=0;i<pins.length;i+=20)await db.from('polices').insert(pins.slice(i,i+20));
+      bar.style.width='65%';
+      for(const u of upd){const id=u.id;delete u.id;await db.from('bordereau_compagnie').update(u).eq('id',id);}
+      for(const u of pupd){const id=u.id;delete u.id;await db.from('polices').update(u).eq('id',id);}
+      bar.style.width='100%';
+      msg.textContent=`✅ Bordereau: ${bN} nouvelles · ${bM} mises à jour${bE?' · '+bE+' erreurs':''} | Polices app: ${pN} nouvelles · ${pM} mises à jour`;
+      showToast(`✅ Import terminé ! ${bN} nouvelles, ${bM} mises à jour`);
+      setTimeout(()=>{charger();switchTab('dashboard');},1500);
+    }catch(err){msg.textContent='❌ '+err.message;showToast('❌ Erreur: '+err.message);}
+  };
+  reader.readAsText(file,'UTF-8');
+}
+const pd=s=>{if(!s)return null;const p=s.split('/');if(p.length===3)return`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;return null;};
+const pn=s=>{if(!s||s==='-')return 0;return parseFloat(s.replace(',','.').replace(/\s/g,''))||0;};
+
+// ===== EXPORT =====
+async function exporterExcel(){
+  showToast('⏳ Export…');
+  const list=getFiltered();
+  const wb=XLSX.utils.book_new();
+  const hd=['N° Police','Client','Branche','État','Mois','Prime TTC','Comm. due','Taux%','Reversé cie','Reçu de moi','Date réception','N° Bordereau pmt','Reste','Reçue ✓'];
+  const rows=list.map(r=>{const t=r.prime_nette&&r.prime_nette>0?Math.round((r.commission_agence/r.prime_nette)*1000)/10:0;return[r.n_police,r.client_nom,BN[r.code_sous_branche]||r.code_sous_branche,r.etat_mvt,moisLabel(r.date_du),Math.round(r.prime_total||0),Math.round(r.commission_agence||0),t,Math.round(r.commission_paye_cie||0),Math.round(r.montant_recu||0),r.date_reception?fmtD(r.date_reception):'',r.reference_paiement||'',Math.round((r.commission_agence||0)-(r.montant_recu||0)),r.commission_recue?'Oui':'Non'];});
+  const ws=XLSX.utils.aoa_to_sheet([hd,...rows]);ws['!cols']=[14,20,12,6,8,12,12,7,12,12,12,16,12,10].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'Commissions');
+  XLSX.writeFile(wb,'LANALA_Commissions_'+new Date().toLocaleDateString('fr-FR').replace(/\//g,'-')+'.xlsx');
+  showToast('✅ Excel téléchargé !');
+}
+
+// ===== MODALS =====
+function fermerModal(id){document.getElementById(id).classList.remove('op');}
+function fermerOv(id,e){if(e.target===document.getElementById(id))fermerModal(id);}
+
+// =============================================
+// ===== MODULE COTATION (depuis AssurEx) =====
+// =============================================
+const LC={AP:'Affaire et Promenade (AP)',TPC:'Transport Propre Compte (TPC)',MINIBUS:'Mini Bus',CAMION:'Camion / Tracteur / TPM',MOTO:'Moto Personnelle',MOTOTAXI:'Moto Taxi',TRICYCLE:'Tricycle Taxi',URBAIN:'Transport Urbain',VOYAGEUR:'Transport Public Voyageur'};
+const MQ={AP:['Toyota','Nissan','Hyundai','Kia','Honda','Suzuki','Mitsubishi','Ford','Renault','Peugeot','Mercedes','BMW','Land Rover','Isuzu','Mazda','Autre'],TPC:['Toyota Hilux','Nissan Navara','Mitsubishi L200','Ford Ranger','Isuzu D-Max','Mercedes Sprinter','Autre'],MINIBUS:['Toyota Hiace','Nissan Urvan','Mercedes Sprinter','Ford Transit','Autre'],CAMION:['Mercedes Actros','Renault Trucks','Volvo','Scania','Isuzu','Foton','Autre'],MOTO:['Honda','Yamaha','Suzuki','Bajaj','TVS','Haojue','Loncin','Autre'],MOTOTAXI:['Honda','Yamaha','Bajaj','TVS','Loncin','Autre'],TRICYCLE:['Bajaj RE','TVS King','Autre'],URBAIN:['Toyota','Nissan','Mitsubishi','Autre'],VOYAGEUR:['Toyota Coaster','Nissan Civilian','King Long','Yutong','Autre']};
+const CPD={'12':['AP','TPC','MINIBUS','CAMION','MOTO','MOTOTAXI','TRICYCLE','URBAIN','VOYAGEUR'],'6':['AP'],'3':['TPC']};
+
+function getTarifs(){
+  if(tarifs)return tarifs;
+  const saved=localStorage.getItem('lanala_tarifs');
+  if(saved){try{tarifs=JSON.parse(saved);return tarifs;}catch(e){}}
+  tarifs=JSON.parse(JSON.stringify(DEFAULT_TARIFS));return tarifs;
+}
+
+var sDur='12',sGar='RC+COND',lastR=null;
+
+function setDur(d){
+  sDur=d;['12','6','3'].forEach(x=>{document.getElementById('d'+x).classList.toggle('on',x===d);});
+  const cat=document.getElementById('cot-cat');
+  cat.innerHTML='<option value="">— Sélectionner —</option>';
+  CPD[d].forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=LC[k];cat.appendChild(o);});
+  if(CPD[d].length===1){cat.value=CPD[d][0];onCat();}
+  else{document.getElementById('cot-mrq').innerHTML='<option value="">— Catégorie d\'abord —</option>';document.getElementById('cot-cv').innerHTML='<option value="">— CV —</option>';document.getElementById('cot-pl').innerHTML='<option value="">— Places —</option>';}
+}
+function setGar(g){sGar=g;['RC','RC+COND','RC+COND+AVR'].forEach(x=>{const id=x==='RC'?'g-rc':x==='RC+COND'?'g-rcc':'g-rcca';document.getElementById(id).classList.toggle('on',x===g);});calcP();}
+function onCat(){
+  const cat=document.getElementById('cot-cat').value;
+  const mrq=document.getElementById('cot-mrq'),cvs=document.getElementById('cot-cv'),pls=document.getElementById('cot-pl');
+  mrq.innerHTML='<option value="">— Sélectionner —</option>';cvs.innerHTML='<option value="">— CV —</option>';pls.innerHTML='<option value="">— Places —</option>';
+  if(!cat)return;
+  (MQ[cat]||[]).forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;mrq.appendChild(o);});
+  const T=getTarifs()[sDur==='6'?'T6M':sDur==='3'?'T3M':'T12'];if(!T||!T[cat])return;
+  const cvA=[];T[cat].d.forEach(r=>{if(!cvA.includes(r.cv))cvA.push(r.cv);});
+  cvA.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cvs.appendChild(o);});
+  if(cvA.length===1){cvs.value=cvA[0];onCv();}
+}
+function onCv(){
+  const cat=document.getElementById('cot-cat').value,cv=document.getElementById('cot-cv').value;
+  const pls=document.getElementById('cot-pl');pls.innerHTML='<option value="">— Places —</option>';
+  if(!cat||!cv)return;
+  const T=getTarifs()[sDur==='6'?'T6M':sDur==='3'?'T3M':'T12'];if(!T||!T[cat])return;
+  T[cat].d.filter(r=>r.cv===cv).forEach(r=>{const o=document.createElement('option');o.value=r.pl;o.textContent=r.p;pls.appendChild(o);});
+}
+document.getElementById('cot-cat').addEventListener('change',onCat);
+document.getElementById('cot-cv').addEventListener('change',onCv);
+document.getElementById('cot-pl').addEventListener('change',calcP);
+
+function calcP(){
+  const cat=document.getElementById('cot-cat').value,cv=document.getElementById('cot-cv').value,pl=document.getElementById('cot-pl').value;
+  const res=document.getElementById('cot-result'),act=document.getElementById('cot-actions');
+  if(!cat||!cv||!pl){res.innerHTML='<div style="text-align:center;padding:20px;color:var(--t4)"><div style="font-size:32px">🧮</div><div style="font-size:13px;margin-top:8px">Sélectionnez toutes les options</div></div>';act.innerHTML='';return;}
+  const T=getTarifs()[sDur==='6'?'T6M':sDur==='3'?'T3M':'T12'];
+  if(!T||!T[cat]){res.innerHTML='<div class="alert-box ab-r">Catégorie non disponible pour cette durée.</div>';return;}
+  let row=null;for(const r of T[cat].d){if(r.cv===cv&&r.pl===pl){row=r;break;}}
+  if(!row){res.innerHTML='<div class="alert-box ab-r">Combinaison introuvable.</div>';return;}
+  const gk=sGar==='RC'?'rc':sGar==='RC+COND'?'rcco':'rccav';
+  const prime=row[gk];
+  if(!prime||prime===0){res.innerHTML='<div class="alert-box ab-r">Cette garantie n\'est pas disponible pour cette catégorie.</div>';return;}
+  const comm=Math.round(prime*T[cat].c);
+  const dl=sDur==='12'?'12 mois':sDur==='6'?'6 mois':'3 mois';
+  const mrq=document.getElementById('cot-mrq').value||'';const mod=document.getElementById('cot-mod').value||'';
+  const nom=document.getElementById('cot-nom').value||'';const tel=document.getElementById('cot-tel').value||'';
+  lastR={cat,catL:T[cat].l,cv,pl,plL:row.p,gar:sGar,prime,comm,dur:dl,mrq,mod,yr:document.getElementById('cot-yr').value||'',col:document.getElementById('cot-col').value||'',nom,tel,adr:''};
+  res.innerHTML=`
+    <div style="background:linear-gradient(135deg,var(--g1),var(--g2));border-radius:var(--rl);padding:18px;color:#fff;text-align:center;margin-bottom:14px">
+      <div style="font-size:10px;opacity:.7;text-transform:uppercase;letter-spacing:.5px">Prime nette indicative (HT)</div>
+      <div style="font-size:36px;font-weight:800;letter-spacing:-2px;margin:6px 0">${fmt(prime)}<span style="font-size:16px;opacity:.8"> GNF</span></div>
+      <div style="font-size:11px;opacity:.75">${T[cat].l} · ${sGar} · ${dl}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="background:var(--gl);border-radius:var(--r);padding:10px 12px"><div style="font-size:10px;color:var(--t3);text-transform:uppercase;font-weight:700;letter-spacing:.4px">Commission agent</div><div style="font-size:16px;font-weight:800;color:var(--g1);margin-top:3px">${fmt(comm)} GNF</div><div style="font-size:10px;color:var(--t3)">${Math.round(T[cat].c*100)}% de la prime</div></div>
+      <div style="background:var(--s3);border-radius:var(--r);padding:10px 12px"><div style="font-size:10px;color:var(--t3);text-transform:uppercase;font-weight:700;letter-spacing:.4px">Détails</div><div style="font-size:11px;margin-top:4px;line-height:1.7"><strong>${cv}</strong> · ${row.p}<br><strong>${sGar}</strong> · <strong>${dl}</strong>${mrq?'<br>'+mrq+(mod?' '+mod:''):''}</div></div>
+    </div>
+    ${nom?`<div style="background:var(--goldl);border-radius:var(--r);padding:8px 12px;font-size:11px"><strong>Client :</strong> ${nom}${tel?' · 📞 '+tel:''}</div>`:''}
+    <div style="font-size:10px;color:var(--t3);margin-top:10px;font-style:italic;text-align:center">⚠️ Prix indicatif HT. Tarif définitif TTC après étude dossier.</div>`;
+  act.innerHTML=`
+    <button class="btn btn-p btn-full" onclick="envoyerWA()">📱 Envoyer par WhatsApp</button>
+    <button class="btn btn-s btn-full" onclick="copierCotation()">📋 Copier le texte</button>`;
+  const btnFull='width:100%;justify-content:center;';
+  document.querySelectorAll('.btn-full').forEach(b=>b.style.cssText=btnFull);
+}
+function btnFull(){document.querySelectorAll('.btn.btn-full').forEach(b=>{b.style.width='100%';b.style.justifyContent='center';});}
+function bTxt(){
+  if(!lastR)return'';const r=lastR;const date=new Date().toLocaleDateString('fr-FR');
+  const veh=[r.mrq,r.mod,r.yr,r.col].filter(Boolean).join(' ');
+  let t='ASSURANCE EXPRESS — ASSUREX\n--------------------\nFICHE DE COTATION AUTO\n--------------------\n';
+  if(r.nom)t+='Client: '+r.nom+'\n';if(r.tel)t+='Tél: '+r.tel+'\n';if(veh)t+='Véhicule: '+veh+'\n';
+  t+='\nDétails :\n- '+r.catL+'\n- '+r.cv+' / '+r.plL+'\n- Garantie: '+r.gar+'\n- Durée: '+r.dur;
+  t+='\n\nPRIME NETTE (HT) :\n=> '+fmt(r.prime)+' GNF\n\nDate: '+date;
+  t+='\n--------------------\nBarème officiel 2025\nLANALA-Assurances Kaloum · Code 140\n\nCotation indicative HT. Prix définitif TTC après étude du dossier.';
+  return t;
+}
+function envoyerWA(){if(!lastR){showToast('Faites une cotation');return;}const tel=(lastR.tel||'').replace(/\s/g,'');const url=tel?'https://wa.me/224'+tel+'?text='+encodeURIComponent(bTxt()):'https://wa.me/?text='+encodeURIComponent(bTxt());window.open(url,'_blank');}
+function copierCotation(){if(!lastR){showToast('Faites une cotation');return;}if(navigator.clipboard){navigator.clipboard.writeText(bTxt()).then(()=>showToast('✅ Copié !'));}else{const ta=document.createElement('textarea');ta.value=bTxt();document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('✅ Copié !');}}
+
+// =============================================
+// ===== GRILLE TARIFAIRE ÉDITABLE =====
+// =============================================
+const DEFAULT_TARIFS={
+  T12:{
+    AP:{l:'Affaire et Promenade (AP)',c:.12,d:[{cv:'3-6 CV',pl:'4',p:'4 pl. citadine',rc:415647,rcco:491647,rccav:592447},{cv:'3-6 CV',pl:'5',p:'5 pl. berline',rc:423742,rcco:499342,rccav:600142},{cv:'3-6 CV',pl:'6',p:'6 pl. monospace',rc:431437,rcco:507037,rccav:607037},{cv:'7-10 CV',pl:'4',p:'4 pl. 4x4',rc:458572,rcco:534172,rccav:634972},{cv:'7-10 CV',pl:'5',p:'5 pl. SUV',rc:466267,rcco:541867,rccav:642667},{cv:'7-10 CV',pl:'6',p:'6 pl. SUV 6p',rc:473962,rcco:549562,rccav:650362},{cv:'7-10 CV',pl:'8',p:'8 pl. monospace',rc:490000,rcco:465000,rccav:666000},{cv:'11-14 CV',pl:'4',p:'4 pl.',rc:522409,rcco:598009,rccav:698809},{cv:'11-14 CV',pl:'5',p:'5 pl.',rc:530104,rcco:605704,rccav:706504},{cv:'11-14 CV',pl:'6',p:'6 pl.',rc:537799,rcco:613399,rccav:714199},{cv:'15-18 CV',pl:'4',p:'4 pl.',rc:586225,rcco:661825,rccav:762625},{cv:'15-18 CV',pl:'5',p:'5 pl.',rc:594000,rcco:660520,rccav:770320},{cv:'20 CV',pl:'4',p:'4 pl.',rc:586000,rcco:662000,rccav:765000}]},
+    TPC:{l:'Transport Propre Compte (TPC)',c:.12,d:[{cv:'7-10 CV',pl:'4',p:'4 pl. pick-up',rc:748945,rcco:824545,rccav:925345},{cv:'7-10 CV',pl:'5',p:'5 pl. double cab.',rc:756640,rcco:832240,rccav:833040},{cv:'7-10 CV',pl:'6',p:'6 pl.',rc:764335,rcco:839935,rccav:940735},{cv:'12 CV',pl:'4',p:'4 pl.',rc:771000,rcco:847000,rccav:947000},{cv:'15 CV',pl:'2',p:'2 pl.',rc:869518,rcco:945118,rccav:1045918},{cv:'19 CV',pl:'5',p:'5 pl.',rc:893000,rcco:969000,rccav:1070000},{cv:'32 CV',pl:'4',p:'4 pl.',rc:894000,rcco:969000,rccav:1069000}]},
+    MINIBUS:{l:'Mini Bus',c:.12,d:[{cv:'10 CV',pl:'3',p:'3 pl.',rc:734000,rcco:810000,rccav:910000},{cv:'10 CV',pl:'17',p:'17 pl.',rc:850000,rcco:924000,rccav:1026000}]},
+    CAMION:{l:'Camion / Tracteur / TPM',c:.12,d:[{cv:'24-32 CV',pl:'2',p:'2 pl.',rc:791337,rcco:866937,rccav:967737},{cv:'32 CV Tracteur',pl:'1',p:'1 pl.',rc:2298000,rcco:0,rccav:0},{cv:'32 CV Remorque',pl:'1',p:'1 pl.',rc:1292000,rcco:0,rccav:0}]},
+    MOTO:{l:'Moto Personnelle',c:.12,d:[{cv:'110 CC',pl:'1',p:'1 pl.',rc:194000,rcco:322000,rccav:423800},{cv:'125 CC',pl:'1',p:'1 pl.',rc:194000,rcco:322000,rccav:423800},{cv:'150 CC',pl:'1',p:'1 pl.',rc:232000,rcco:360000,rccav:461000}]},
+    MOTOTAXI:{l:'Moto Taxi',c:.12,d:[{cv:'125 CC',pl:'1',p:'1 pl.',rc:382000,rcco:467000,rccav:0}]},
+    TRICYCLE:{l:'Tricycle Taxi',c:.12,d:[{cv:'150 CC',pl:'5',p:'5 pl.',rc:1287378,rcco:1372718,rccav:0}]},
+    URBAIN:{l:'Transport Urbain',c:.12,d:[{cv:'7-10 CV',pl:'4',p:'4 pl.',rc:978000,rcco:0,rccav:0},{cv:'7-10 CV',pl:'8',p:'8 pl.',rc:1678000,rcco:0,rccav:0}]},
+    VOYAGEUR:{l:'Transport Public Voyageur',c:.12,d:[{cv:'12 CV',pl:'15',p:'15 pl.',rc:1435000,rcco:1520000,rccav:0},{cv:'10 CV',pl:'17',p:'17 pl.',rc:850000,rcco:925000,rccav:1026000}]}
+  },
+  T6M:{AP:{l:'Affaire et Promenade (AP)',c:.12,d:[{cv:'Toutes puissances',pl:'4',p:'4 pl.',rc:276000,rcco:320000,rccav:0},{cv:'Toutes puissances',pl:'5',p:'5 pl.',rc:281000,rcco:325000,rccav:0},{cv:'Toutes puissances',pl:'6',p:'6 pl.',rc:285000,rcco:328000,rccav:0},{cv:'Toutes puissances',pl:'7',p:'7 pl.',rc:289000,rcco:333000,rccav:0},{cv:'Toutes puissances',pl:'8',p:'8 pl.',rc:354000,rcco:390000,rccav:440000},{cv:'Toutes puissances',pl:'9',p:'9 pl.',rc:359000,rcco:396000,rccav:446000},{cv:'Toutes puissances',pl:'10',p:'10 pl.',rc:364000,rcco:401000,rccav:450000}]}},
+  T3M:{TPC:{l:'Transport Propre Compte (TPC)',c:.12,d:[{cv:'10 CV',pl:'4',p:'4 pl.',rc:402000,rcco:0,rccav:0}]}}
+};
+
+function renderGrilleTarifs(){
+  const T=getTarifs();const tc=T.T12;
+  let html='';
+  Object.entries(tc).forEach(([key,cat])=>{
+    html+=`<div class="tarif-section">
+      <div class="tarif-hd">
+        <div class="tarif-hd-title">${cat.l} <span style="color:var(--t3);font-weight:400;font-size:11px">· 12 mois</span></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;color:var(--t3)">Taux comm. :</span>
+          <input type="number" value="${Math.round(cat.c*100)}" min="0" max="30" step="0.1" onchange="majTauxCat('${key}',this.value)" style="width:60px;padding:3px 6px;border:1px solid var(--brd);border-radius:4px;font-size:12px;text-align:center"/> %
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="ttarif">
+          <thead><tr><th>Libellé (CV/Places)</th><th style="text-align:right">RC (GNF)</th><th style="text-align:right">RC+COND (GNF)</th><th style="text-align:right">RC+COND+AVR (GNF)</th></tr></thead>
+          <tbody>
+            ${cat.d.map((row,i)=>`<tr>
+              <td><input class="tarif-inp" style="text-align:left;min-width:140px" value="${row.p}" onchange="majTarifCell('${key}',${i},'p',this.value)"/><span style="font-size:10px;color:var(--t3);margin-left:6px">${row.cv} · ${row.pl}pl.</span></td>
+              <td><input class="tarif-inp" type="number" value="${row.rc||''}" placeholder="—" onchange="majTarifCell('${key}',${i},'rc',this.value)"/></td>
+              <td><input class="tarif-inp" type="number" value="${row.rcco||''}" placeholder="—" onchange="majTarifCell('${key}',${i},'rcco',this.value)"/></td>
+              <td><input class="tarif-inp" type="number" value="${row.rccav||''}" placeholder="—" onchange="majTarifCell('${key}',${i},'rccav',this.value)"/></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+  document.getElementById('grille-tarifs').innerHTML=html;
+  document.getElementById('taux-comm-display').textContent=Math.round(tc.AP.c*100)+'%';
+}
+
+function majTarifCell(key,idx,field,val){
+  const T=getTarifs();
+  if(field==='p')T.T12[key].d[idx][field]=val;
+  else T.T12[key].d[idx][field]=parseInt(val)||0;
+  tarifs=T;
+}
+function majTauxCat(key,val){
+  const T=getTarifs();T.T12[key].c=parseFloat(val)/100;tarifs=T;
+}
+function sauvegarderTarifs(){
+  localStorage.setItem('lanala_tarifs',JSON.stringify(getTarifs()));
+  showToast('✅ Grille tarifaire sauvegardée !');
+}
+
+// ===== TAUX COMMISSION =====
+function ouvrirModifTauxComm(){
+  const T=getTarifs();document.getElementById('taux-inp').value=Math.round(T.T12.AP.c*100);
+  document.getElementById('ov-taux').classList.add('op');
+}
+function sauvegarderTauxComm(){
+  const val=parseFloat(document.getElementById('taux-inp').value)||12;
+  const T=getTarifs();
+  Object.keys(T.T12).forEach(k=>{T.T12[k].c=val/100;});
+  if(T.T6M)Object.keys(T.T6M).forEach(k=>{T.T6M[k].c=val/100;});
+  if(T.T3M)Object.keys(T.T3M).forEach(k=>{T.T3M[k].c=val/100;});
+  tarifs=T;localStorage.setItem('lanala_tarifs',JSON.stringify(T));
+  document.getElementById('taux-comm-display').textContent=val+'%';
+  fermerModal('ov-taux');showToast('✅ Taux commission mis à jour : '+val+'%');renderGrilleTarifs();
+}
+
+// ===== INIT =====
+setDur('12');
+document.getElementById('p-date').value=new Date().toISOString().split('T')[0];
+charger();
+</script>
+</body>
+</html>
